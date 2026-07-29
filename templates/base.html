@@ -31,6 +31,11 @@
         rel="stylesheet"
         href="{{ url_for('static', path='css/style.css') }}"
     >
+
+    <link
+        rel="stylesheet"
+        href="{{ url_for('static', path='css/week-selector.css') }}"
+    >
 </head>
 
 <body>
@@ -71,9 +76,54 @@
 
                 <span class="status-divider"></span>
 
+                {% if available_weeks %}
+                <form
+                    class="week-selector-form"
+                    method="get"
+                    action="/"
+                >
+                    <div class="week-selector-control">
+                        <label
+                            class="week-selector-label"
+                            for="week-selector"
+                        >
+                            Show standings through week
+                        </label>
+
+                        <select
+                            id="week-selector"
+                            class="week-selector-select"
+                            name="week"
+                            aria-label="Show standings through week"
+                            onchange="this.form.submit()"
+                        >
+                            {% for week_number in available_weeks %}
+                            <option
+                                value="{{ week_number }}"
+                                {% if week_number == current_week %}
+                                    selected
+                                {% endif %}
+                            >
+                                Through Week {{ week_number }}
+                            </option>
+                            {% endfor %}
+                        </select>
+
+                        <noscript>
+                            <button
+                                class="week-selector-submit"
+                                type="submit"
+                            >
+                                Apply
+                            </button>
+                        </noscript>
+                    </div>
+                </form>
+                {% else %}
                 <span class="week-label">
                     Week {{ current_week }}
                 </span>
+                {% endif %}
             </div>
         </div>
     </header>

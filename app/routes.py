@@ -1,6 +1,6 @@
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional, Tuple
 
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Query, Request
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 
@@ -19,13 +19,7 @@ templates = Jinja2Templates(directory="templates")
 
 
 def format_rank(value: float) -> str:
-    """
-    Display whole-number ranks without a decimal.
-
-    Examples:
-        1.0 -> "1"
-        2.5 -> "2.5"
-    """
+    """Display whole-number ranks without a decimal."""
 
     numeric_value = float(value)
 
@@ -36,10 +30,7 @@ def format_rank(value: float) -> str:
 
 
 def format_number(value: float) -> str:
-    """
-    Display whole numbers without a decimal and preserve one
-    decimal when a tie produces a half-point.
-    """
+    """Display whole numbers cleanly and preserve half-points."""
 
     numeric_value = float(value)
 
@@ -57,105 +48,56 @@ def validate_team_sets(
     historical_teams: set,
     yahoo_teams: set,
 ) -> None:
-    """
-    Confirm that both historical files contain the same teams.
-    """
+    """Confirm that both historical files contain the same teams."""
 
-    missing_from_yahoo = (
-        historical_teams - yahoo_teams
-    )
-
-    missing_from_historical = (
-        yahoo_teams - historical_teams
-    )
+    missing_from_yahoo = historical_teams - yahoo_teams
+    missing_from_historical = yahoo_teams - historical_teams
 
     if missing_from_yahoo:
-        missing_text = ", ".join(
-            sorted(missing_from_yahoo)
-        )
-
+        missing_text = ", ".join(sorted(missing_from_yahoo))
         raise ValueError(
             "Teams missing from yahoo_wl_2025.json: "
             f"{missing_text}"
         )
 
     if missing_from_historical:
-        missing_text = ", ".join(
-            sorted(missing_from_historical)
-        )
-
+        missing_text = ", ".join(sorted(missing_from_historical))
         raise ValueError(
             "Teams missing from historical_2025.json: "
             f"{missing_text}"
         )
 
 
-def build_yahoo_audit_rows(
+def build_yahoo_snapshot(
     yahoo_teams: Dict[str, Dict[str, Any]],
+    weeks: Dict[str, Dict[str, float]],
     week_numbers: List[str],
-) -> List[Dict[str, Any]]:
+) -> Tuple[List[Dict[str, Any]], Dict[str, int]]:
     """
-    Build the Yahoo W/L audit table.
+    Recalculate Yahoo standings through the selected week.
 
-    Teams are ranked by:
-        1. Total wins, descending
-        2. Total Points For, descending
-        3. Team name, ascending
-
-    The calculated ordering is validated against the official
-    Yahoo rank stored in yahoo_wl_2025.json.
+    Teams are ranked by total wins, then cumulative Points For.
     """
 
-    ordered_team_names = sorted(
-        yahoo_teams.keys(),
-        key=lambda team_name: (
-            -int(
-                yahoo_teams[
-                    team_name
-                ]["total_wins"]
-            ),
-            -float(
-                yahoo_teams[
-                    team_name
-                ]["total_points_for"]
-            ),
-            team_name.lower(),
-        ),
-    )
+    snapshot: Dict[str, Dict[str, Any]] = {}
 
-    rows: List[Dict[str, Any]] = []
-
-    for calculated_rank, team_name in enumerate(
-        ordered_team_names,
-        start=1,
-    ):
-        team_data = yahoo_teams[team_name]
-
-        official_rank = int(
-            team_data["official_yahoo_rank"]
-        )
-
-        if calculated_rank != official_rank:
-            raise ValueError(
-                "Yahoo ranking validation failed for "
-                f"'{team_name}'. Calculated rank: "
-                f"{calculated_rank}; stored official "
-                f"rank: {official_rank}."
-            )
-
-        weekly_results = []
+    for team_name, team_data in yahoo_teams.items():
+        weekly_results: List[Dict[str, Any]] = []
+        total_wins = 0.0
 
         for week_number in week_numbers:
-            result = team_data[
-                "weekly_results"
-            ].get(week_number)
+            result = team_data["weekly_results"].get(week_number)
 
             if result is None:
                 raise ValueError(
                     "Yahoo W/L data is missing "
-                    f"Week {week_number} for "
-                    f"'{team_name}'."
+                    f"Week {week_number} for '{team_name}'."
                 )
+
+            if result == "W":
+                total_wins += 1.0
+            elif result == "T":
+                total_wins += 0.5
 
             weekly_results.append(
                 {
@@ -167,21 +109,52 @@ def build_yahoo_audit_rows(
                 }
             )
 
+        total_points_for = sum(
+            float(weeks[week_number][team_name])
+            for week_number in week_numbers
+        )
+
+        snapshot[team_name] = {
+            "total_wins": total_wins,
+            "total_points_for": total_points_for,
+            "weekly_results": weekly_results,
+        }
+
+    ordered_team_names = sorted(
+        snapshot.keys(),
+        key=lambda team_name: (
+            -float(snapshot[team_name]["total_wins"]),
+            -float(snapshot[team_name]["total_points_for"]),
+            team_name.lower(),
+        ),
+    )
+
+    yahoo_ranks = {
+        team_name: rank
+        for rank, team_name in enumerate(
+            ordered_team_names,
+            start=1,
+        )
+    }
+
+    rows: List[Dict[str, Any]] = []
+
+    for team_name in ordered_team_names:
         rows.append(
             {
-                "rank": calculated_rank,
+                "rank": yahoo_ranks[team_name],
                 "team_name": team_name,
-                "total_wins": int(
-                    team_data["total_wins"]
-                ),
-                "total_points_for": float(
-                    team_data["total_points_for"]
-                ),
-                "weekly_results": weekly_results,
+                "total_wins": snapshot[team_name]["total_wins"],
+                "total_points_for": snapshot[team_name][
+                    "total_points_for"
+                ],
+                "weekly_results": snapshot[team_name][
+                    "weekly_results"
+                ],
             }
         )
 
-    return rows
+    return rows, yahoo_ranks
 
 
 def build_points_for_audit_rows(
@@ -189,29 +162,17 @@ def build_points_for_audit_rows(
     week_numbers: List[str],
     standings: List[Any],
 ) -> List[Dict[str, Any]]:
-    """
-    Build the Points For audit table.
-
-    Teams are ordered from highest total Points For to lowest.
-
-    Each weekly value is flagged when it is the highest or lowest
-    Points For score for that week. If multiple teams are tied for
-    the weekly high or low, every tied value is flagged.
-    """
+    """Build the cumulative Points For audit table."""
 
     total_points_for = {
-        standing.team_name: float(
-            standing.points_for
-        )
+        standing.team_name: float(standing.points_for)
         for standing in standings
     }
 
     weekly_highs = {
         week_number: max(
             float(score)
-            for score in weeks[
-                week_number
-            ].values()
+            for score in weeks[week_number].values()
         )
         for week_number in week_numbers
     }
@@ -219,9 +180,7 @@ def build_points_for_audit_rows(
     weekly_lows = {
         week_number: min(
             float(score)
-            for score in weeks[
-                week_number
-            ].values()
+            for score in weeks[week_number].values()
         )
         for week_number in week_numbers
     }
@@ -240,32 +199,16 @@ def build_points_for_audit_rows(
         ordered_team_names,
         start=1,
     ):
-        weekly_values: List[
-            Dict[str, Any]
-        ] = []
+        weekly_values: List[Dict[str, Any]] = []
 
         for week_number in week_numbers:
-            value = float(
-                weeks[
-                    week_number
-                ][team_name]
-            )
+            value = float(weeks[week_number][team_name])
 
             weekly_values.append(
                 {
                     "value": value,
-                    "is_high": (
-                        value
-                        == weekly_highs[
-                            week_number
-                        ]
-                    ),
-                    "is_low": (
-                        value
-                        == weekly_lows[
-                            week_number
-                        ]
-                    ),
+                    "is_high": value == weekly_highs[week_number],
+                    "is_low": value == weekly_lows[week_number],
                 }
             )
 
@@ -273,9 +216,7 @@ def build_points_for_audit_rows(
             {
                 "rank": rank,
                 "team_name": team_name,
-                "total": total_points_for[
-                    team_name
-                ],
+                "total": total_points_for[team_name],
                 "weekly_values": weekly_values,
             }
         )
@@ -284,22 +225,11 @@ def build_points_for_audit_rows(
 
 
 def build_mamba_audit_rows(
-    weekly_mamba_points: Dict[
-        str,
-        Dict[str, float],
-    ],
+    weekly_mamba_points: Dict[str, Dict[str, float]],
     week_numbers: List[str],
     standings: List[Any],
 ) -> List[Dict[str, Any]]:
-    """
-    Build the Mamba Points audit table.
-
-    Teams are ordered by total Mamba Points. Points For is used as
-    the tiebreaker, matching the scoring engine.
-
-    Each weekly value is flagged when it is the highest or lowest
-    Mamba Points award for that week.
-    """
+    """Build the cumulative Mamba Points audit table."""
 
     standing_by_team = {
         standing.team_name: standing
@@ -309,9 +239,7 @@ def build_mamba_audit_rows(
     weekly_highs = {
         week_number: max(
             float(points)
-            for points in weekly_mamba_points[
-                week_number
-            ].values()
+            for points in weekly_mamba_points[week_number].values()
         )
         for week_number in week_numbers
     }
@@ -319,9 +247,7 @@ def build_mamba_audit_rows(
     weekly_lows = {
         week_number: min(
             float(points)
-            for points in weekly_mamba_points[
-                week_number
-            ].values()
+            for points in weekly_mamba_points[week_number].values()
         )
         for week_number in week_numbers
     }
@@ -329,16 +255,8 @@ def build_mamba_audit_rows(
     ordered_team_names = sorted(
         standing_by_team.keys(),
         key=lambda team_name: (
-            -float(
-                standing_by_team[
-                    team_name
-                ].mamba_points
-            ),
-            -float(
-                standing_by_team[
-                    team_name
-                ].points_for
-            ),
+            -float(standing_by_team[team_name].mamba_points),
+            -float(standing_by_team[team_name].points_for),
             team_name.lower(),
         ),
     )
@@ -349,32 +267,18 @@ def build_mamba_audit_rows(
         ordered_team_names,
         start=1,
     ):
-        weekly_values: List[
-            Dict[str, Any]
-        ] = []
+        weekly_values: List[Dict[str, Any]] = []
 
         for week_number in week_numbers:
             value = float(
-                weekly_mamba_points[
-                    week_number
-                ][team_name]
+                weekly_mamba_points[week_number][team_name]
             )
 
             weekly_values.append(
                 {
                     "value": value,
-                    "is_high": (
-                        value
-                        == weekly_highs[
-                            week_number
-                        ]
-                    ),
-                    "is_low": (
-                        value
-                        == weekly_lows[
-                            week_number
-                        ]
-                    ),
+                    "is_high": value == weekly_highs[week_number],
+                    "is_low": value == weekly_lows[week_number],
                 }
             )
 
@@ -383,9 +287,7 @@ def build_mamba_audit_rows(
                 "rank": rank,
                 "team_name": team_name,
                 "total": float(
-                    standing_by_team[
-                        team_name
-                    ].mamba_points
+                    standing_by_team[team_name].mamba_points
                 ),
                 "weekly_values": weekly_values,
             }
@@ -394,24 +296,22 @@ def build_mamba_audit_rows(
     return rows
 
 
-@router.get(
-    "/",
-    response_class=HTMLResponse,
-)
-def home(request: Request):
+@router.get("/", response_class=HTMLResponse)
+def home(
+    request: Request,
+    week: Optional[int] = Query(default=None, ge=1),
+):
     season_data = load_historical_season()
     yahoo_wl_data = load_yahoo_wl_season()
 
-    weeks = season_data["weeks"]
-
-    weekly_mamba_points = season_data[
+    all_weeks = season_data["weeks"]
+    all_weekly_mamba_points = season_data[
         "expected_weekly_mamba_points"
     ]
-
     yahoo_teams = yahoo_wl_data["teams"]
 
-    week_numbers = sorted(
-        weeks.keys(),
+    all_week_numbers = sorted(
+        all_weeks.keys(),
         key=int,
     )
 
@@ -419,91 +319,88 @@ def home(request: Request):
         str(week_number)
         for week_number in range(
             1,
-            int(
-                yahoo_wl_data[
-                    "through_week"
-                ]
-            ) + 1,
+            int(yahoo_wl_data["through_week"]) + 1,
         )
     ]
 
-    if week_numbers != yahoo_week_numbers:
+    if all_week_numbers != yahoo_week_numbers:
         raise ValueError(
-            "Historical score weeks and Yahoo W/L "
-            "weeks do not match. Historical weeks: "
-            f"{week_numbers}; Yahoo weeks: "
+            "Historical score weeks and Yahoo W/L weeks do not "
+            "match. Historical weeks: "
+            f"{all_week_numbers}; Yahoo weeks: "
             f"{yahoo_week_numbers}."
         )
 
     historical_team_names = set(
-        next(iter(weeks.values())).keys()
+        next(iter(all_weeks.values())).keys()
     )
-
-    yahoo_team_names = set(
-        yahoo_teams.keys()
-    )
+    yahoo_team_names = set(yahoo_teams.keys())
 
     validate_team_sets(
         historical_teams=historical_team_names,
         yahoo_teams=yahoo_team_names,
     )
 
-    yahoo_ranks = {
-        team_name: int(
-            team_data[
-                "official_yahoo_rank"
-            ]
-        )
-        for team_name, team_data in (
-            yahoo_teams.items()
-        )
-    }
+    validate_historical_mamba_points(
+        weeks=all_weeks,
+        expected_weekly_points=all_weekly_mamba_points,
+    )
 
-    historical_yahoo_ranks = season_data[
-        "official_yahoo_ranks_after_week_13"
+    maximum_week = max(
+        int(week_number)
+        for week_number in all_week_numbers
+    )
+
+    selected_week = week if week is not None else maximum_week
+    selected_week = min(selected_week, maximum_week)
+
+    week_numbers = [
+        week_number
+        for week_number in all_week_numbers
+        if int(week_number) <= selected_week
     ]
 
-    if yahoo_ranks != historical_yahoo_ranks:
-        raise ValueError(
-            "Official Yahoo ranks do not match "
-            "between historical_2025.json and "
-            "yahoo_wl_2025.json."
-        )
+    weeks = {
+        week_number: all_weeks[week_number]
+        for week_number in week_numbers
+    }
 
-    validate_historical_mamba_points(
+    weekly_mamba_points = {
+        week_number: all_weekly_mamba_points[week_number]
+        for week_number in week_numbers
+    }
+
+    yahoo_rows, yahoo_ranks = build_yahoo_snapshot(
+        yahoo_teams=yahoo_teams,
         weeks=weeks,
-        expected_weekly_points=(
-            weekly_mamba_points
-        ),
+        week_numbers=week_numbers,
     )
+
+    if selected_week == maximum_week:
+        stored_yahoo_ranks = {
+            team_name: int(team_data["official_yahoo_rank"])
+            for team_name, team_data in yahoo_teams.items()
+        }
+
+        if yahoo_ranks != stored_yahoo_ranks:
+            raise ValueError(
+                "Calculated Yahoo ranks do not match the stored "
+                "official ranks for the final historical week."
+            )
 
     standings = build_hybrid_standings(
         weeks=weeks,
         yahoo_ranks=yahoo_ranks,
     )
 
-    current_week = max(
-        int(week_number)
-        for week_number in week_numbers
-    )
-
-    yahoo_rows = build_yahoo_audit_rows(
-        yahoo_teams=yahoo_teams,
+    points_for_rows = build_points_for_audit_rows(
+        weeks=weeks,
         week_numbers=week_numbers,
-    )
-
-    points_for_rows = (
-        build_points_for_audit_rows(
-            weeks=weeks,
-            week_numbers=week_numbers,
-            standings=standings,
-        )
+        standings=standings,
     )
 
     mamba_rows = build_mamba_audit_rows(
-        weekly_mamba_points=(
-            weekly_mamba_points
-        ),
+        weekly_mamba_points=weekly_mamba_points,
         week_numbers=week_numbers,
         standings=standings,
     )
@@ -514,7 +411,13 @@ def home(request: Request):
             "request": request,
             "page_title": "Mamba Fantasy",
             "season": season_data["season"],
-            "current_week": current_week,
+            "available_seasons": [season_data["season"]],
+            "available_weeks": [
+                int(week_number)
+                for week_number in all_week_numbers
+            ],
+            "current_week": selected_week,
+            "maximum_week": maximum_week,
             "standings": standings,
             "week_numbers": week_numbers,
             "yahoo_rows": yahoo_rows,

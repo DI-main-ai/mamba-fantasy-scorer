@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <meta
+        name="theme-color"
+        content="#0d0d0f"
+    >
+
+    <title>
+        {% block title %}
+            {{ page_title }}
+        {% endblock %}
+    </title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap"
+        rel="stylesheet"
+    >
+
+    <link
+        rel="stylesheet"
+        href="{{ url_for('static', path='css/style.css') }}"
+    >
+</head>
+
+<body>
+    <header class="site-header">
+        <div class="header-content">
+            <a class="brand" href="/">
+                <div class="brand-mark">
+                    <img
+                        src="{{ url_for('static', path='images/mamba-logo-transparent.png') }}"
+                        alt="Mamba Fantasy Logo"
+                        class="brand-logo"
+                        width="34"
+                        height="34"
+                        style="
+                            display: block;
+                            width: 34px;
+                            height: 34px;
+                            object-fit: contain;
+                        "
+                    >
+                </div>
+
+                <div class="brand-copy">
+                    <span class="brand-name">
+                        Mamba Fantasy
+                    </span>
+
+                    <span class="brand-subtitle">
+                        Hybrid Fantasy Football Rankings
+                    </span>
+                </div>
+            </a>
+
+            <div class="season-status">
+                <span class="season-label">
+                    {{ season }} Season
+                </span>
+
+                <span class="status-divider"></span>
+
+                <span class="week-label">
+                    Week {{ current_week }}
+                </span>
+            </div>
+        </div>
+    </header>
+
+    <main class="page-shell">
+        {% block content %}
+        {% endblock %}
+    </main>
+
+    <footer class="site-footer">
+        <p>
+            Powered by the Mamba Scoring System
+        </p>
+    </footer>
+</body>
+</html>

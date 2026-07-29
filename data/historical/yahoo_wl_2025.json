@@ -1,0 +1,291 @@
+{
+  "season": 2025,
+  "through_week": 13,
+  "source": "MambaScorer2025.xlsm W-L table screenshot",
+  "ranking_rule": {
+    "primary": "total_wins descending",
+    "tiebreaker": "total_points_for descending"
+  },
+  "teams": {
+    "McMamba McMentality": {
+      "total_wins": 11,
+      "total_points_for": 1498.52,
+      "official_yahoo_rank": 1,
+      "weekly_results": {
+        "1": "L",
+        "2": "W",
+        "3": "W",
+        "4": "W",
+        "5": "L",
+        "6": "W",
+        "7": "W",
+        "8": "W",
+        "9": "W",
+        "10": "W",
+        "11": "W",
+        "12": "W",
+        "13": "W"
+      }
+    },
+    "Cuff": {
+      "total_wins": 10,
+      "total_points_for": 1338.76,
+      "official_yahoo_rank": 2,
+      "weekly_results": {
+        "1": "W",
+        "2": "L",
+        "3": "W",
+        "4": "W",
+        "5": "W",
+        "6": "L",
+        "7": "W",
+        "8": "L",
+        "9": "W",
+        "10": "W",
+        "11": "W",
+        "12": "W",
+        "13": "W"
+      }
+    },
+    "Culturally Inappropriate": {
+      "total_wins": 9,
+      "total_points_for": 1351.88,
+      "official_yahoo_rank": 3,
+      "weekly_results": {
+        "1": "L",
+        "2": "W",
+        "3": "W",
+        "4": "W",
+        "5": "W",
+        "6": "W",
+        "7": "W",
+        "8": "L",
+        "9": "L",
+        "10": "W",
+        "11": "W",
+        "12": "L",
+        "13": "W"
+      }
+    },
+    "License to Kyren": {
+      "total_wins": 8,
+      "total_points_for": 1148.3,
+      "official_yahoo_rank": 4,
+      "weekly_results": {
+        "1": "W",
+        "2": "W",
+        "3": "L",
+        "4": "L",
+        "5": "W",
+        "6": "W",
+        "7": "L",
+        "8": "W",
+        "9": "W",
+        "10": "L",
+        "11": "W",
+        "12": "L",
+        "13": "W"
+      }
+    },
+    "Gibbs Me My Shmoney": {
+      "total_wins": 7,
+      "total_points_for": 1296.68,
+      "official_yahoo_rank": 5,
+      "weekly_results": {
+        "1": "L",
+        "2": "L",
+        "3": "W",
+        "4": "L",
+        "5": "L",
+        "6": "W",
+        "7": "W",
+        "8": "W",
+        "9": "W",
+        "10": "W",
+        "11": "L",
+        "12": "W",
+        "13": "L"
+      }
+    },
+    "Lamarvel Universe": {
+      "total_wins": 7,
+      "total_points_for": 1234.56,
+      "official_yahoo_rank": 6,
+      "weekly_results": {
+        "1": "W",
+        "2": "W",
+        "3": "L",
+        "4": "W",
+        "5": "W",
+        "6": "W",
+        "7": "L",
+        "8": "W",
+        "9": "L",
+        "10": "W",
+        "11": "L",
+        "12": "L",
+        "13": "L"
+      }
+    },
+    "AMERICA'S TEAM": {
+      "total_wins": 6,
+      "total_points_for": 1240.42,
+      "official_yahoo_rank": 7,
+      "weekly_results": {
+        "1": "L",
+        "2": "L",
+        "3": "L",
+        "4": "W",
+        "5": "L",
+        "6": "W",
+        "7": "L",
+        "8": "W",
+        "9": "L",
+        "10": "W",
+        "11": "W",
+        "12": "L",
+        "13": "W"
+      }
+    },
+    "Kyle's Hustle": {
+      "total_wins": 6,
+      "total_points_for": 1224.08,
+      "official_yahoo_rank": 8,
+      "weekly_results": {
+        "1": "L",
+        "2": "W",
+        "3": "W",
+        "4": "W",
+        "5": "L",
+        "6": "L",
+        "7": "L",
+        "8": "L",
+        "9": "W",
+        "10": "W",
+        "11": "L",
+        "12": "W",
+        "13": "L"
+      }
+    },
+    "Shezad Jiwani": {
+      "total_wins": 6,
+      "total_points_for": 1180.9,
+      "official_yahoo_rank": 9,
+      "weekly_results": {
+        "1": "L",
+        "2": "W",
+        "3": "L",
+        "4": "L",
+        "5": "L",
+        "6": "L",
+        "7": "W",
+        "8": "L",
+        "9": "W",
+        "10": "L",
+        "11": "W",
+        "12": "W",
+        "13": "W"
+      }
+    },
+    "Mr. Cleo": {
+      "total_wins": 6,
+      "total_points_for": 1139.59,
+      "official_yahoo_rank": 10,
+      "weekly_results": {
+        "1": "W",
+        "2": "L",
+        "3": "L",
+        "4": "L",
+        "5": "W",
+        "6": "L",
+        "7": "W",
+        "8": "W",
+        "9": "L",
+        "10": "L",
+        "11": "W",
+        "12": "W",
+        "13": "L"
+      }
+    },
+    "KING": {
+      "total_wins": 5,
+      "total_points_for": 1168.64,
+      "official_yahoo_rank": 11,
+      "weekly_results": {
+        "1": "W",
+        "2": "L",
+        "3": "W",
+        "4": "L",
+        "5": "W",
+        "6": "L",
+        "7": "L",
+        "8": "L",
+        "9": "L",
+        "10": "L",
+        "11": "L",
+        "12": "W",
+        "13": "W"
+      }
+    },
+    "I hate team sports": {
+      "total_wins": 5,
+      "total_points_for": 1047.84,
+      "official_yahoo_rank": 12,
+      "weekly_results": {
+        "1": "W",
+        "2": "L",
+        "3": "L",
+        "4": "W",
+        "5": "L",
+        "6": "W",
+        "7": "L",
+        "8": "W",
+        "9": "W",
+        "10": "L",
+        "11": "L",
+        "12": "L",
+        "13": "L"
+      }
+    },
+    "Meet The Wadlers": {
+      "total_wins": 3,
+      "total_points_for": 1114.64,
+      "official_yahoo_rank": 13,
+      "weekly_results": {
+        "1": "L",
+        "2": "W",
+        "3": "L",
+        "4": "L",
+        "5": "W",
+        "6": "L",
+        "7": "W",
+        "8": "L",
+        "9": "L",
+        "10": "L",
+        "11": "L",
+        "12": "L",
+        "13": "L"
+      }
+    },
+    "j PRINCE": {
+      "total_wins": 2,
+      "total_points_for": 1095.14,
+      "official_yahoo_rank": 14,
+      "weekly_results": {
+        "1": "W",
+        "2": "L",
+        "3": "W",
+        "4": "L",
+        "5": "L",
+        "6": "L",
+        "7": "L",
+        "8": "L",
+        "9": "L",
+        "10": "L",
+        "11": "L",
+        "12": "L",
+        "13": "L"
+      }
+    }
+  }
+}

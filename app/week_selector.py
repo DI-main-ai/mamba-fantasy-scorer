@@ -53,11 +53,6 @@ PERIOD_SELECTOR_STYLES = """
     outline: 2px solid rgba(253, 185, 39, 0.15);
     outline-offset: 1px;
 }
-.period-field select:disabled {
-    color: var(--text-secondary);
-    cursor: default;
-    opacity: 0.78;
-}
 .period-submit {
     height: 40px;
     padding: 0 15px;
@@ -71,6 +66,10 @@ PERIOD_SELECTOR_STYLES = """
 }
 .period-submit:hover {
     background: rgba(253, 185, 39, 0.17);
+}
+.period-season-note {
+    color: var(--text-secondary);
+    font-size: 10px;
 }
 @media (max-width: 620px) {
     .period-controls,
@@ -111,13 +110,19 @@ def build_period_selector(selected_week: int) -> str:
             <form class="period-selector" method="get" action="/">
                 <label class="period-field">
                     <span>Season</span>
-                    <select aria-label="Season" disabled>
-                        <option selected>{HISTORICAL_SEASON}</option>
+                    <select
+                        id="period-season-select"
+                        aria-label="Season"
+                    >
+                        <option value="{HISTORICAL_SEASON}" selected>
+                            {HISTORICAL_SEASON}
+                        </option>
                     </select>
                 </label>
                 <label class="period-field">
                     <span>Through Week</span>
                     <select
+                        class="period-week-select"
                         name="week"
                         aria-label="Through Week"
                         onchange="this.form.submit()"
@@ -132,7 +137,75 @@ def build_period_selector(selected_week: int) -> str:
             <span class="updated-label">
                 Recalculated through Week {selected_week}
             </span>
+            <span class="period-season-note" id="period-season-note">
+                Loading Yahoo league seasons…
+            </span>
         </div>
+        <script>
+        (function () {{
+            const seasonSelect = document.getElementById('period-season-select');
+            const weekSelect = document.querySelector('.period-week-select');
+            const seasonNote = document.getElementById('period-season-note');
+
+            if (!seasonSelect) return;
+
+            seasonSelect.addEventListener('change', function () {{
+                const season = Number(this.value);
+                const week = weekSelect ? Number(weekSelect.value || 1) : 1;
+
+                if (season === {HISTORICAL_SEASON}) {{
+                    window.location.href = '/?week=' + encodeURIComponent(week);
+                    return;
+                }}
+
+                window.location.href =
+                    '/auth/yahoo/mamba/history?season=' + encodeURIComponent(season) +
+                    '&week=1';
+            }});
+
+            fetch('/auth/yahoo/mamba/seasons', {{
+                credentials: 'same-origin',
+                headers: {{ 'Accept': 'application/json' }}
+            }})
+            .then(function (response) {{
+                if (!response.ok) throw new Error('Yahoo season discovery unavailable');
+                return response.json();
+            }})
+            .then(function (data) {{
+                const seasons = Array.isArray(data.season_numbers)
+                    ? data.season_numbers.map(Number)
+                    : [];
+
+                if (!seasons.includes({HISTORICAL_SEASON})) {{
+                    seasons.push({HISTORICAL_SEASON});
+                }}
+
+                seasons.sort(function (a, b) {{ return b - a; }});
+                seasonSelect.innerHTML = '';
+
+                seasons.forEach(function (season) {{
+                    const option = document.createElement('option');
+                    option.value = String(season);
+                    option.textContent = String(season);
+                    if (season === {HISTORICAL_SEASON}) option.selected = true;
+                    seasonSelect.appendChild(option);
+                }});
+
+                if (seasonNote) {{
+                    seasonNote.textContent =
+                        seasons.length > 1
+                            ? 'Yahoo league history loaded.'
+                            : 'Only the 2025 historical season is currently linked.';
+                }}
+            }})
+            .catch(function () {{
+                if (seasonNote) {{
+                    seasonNote.textContent =
+                        'Reconnect Yahoo to load additional league seasons.';
+                }}
+            }});
+        }})();
+        </script>
     """
 
 

@@ -53,15 +53,9 @@ def live_dashboard_home(
 
     if data["mode"] == "matchups":
         return templates.TemplateResponse(
-            "home.html",
+            "matchups.html",
             {
                 **common_context,
-                "show_scoring_dashboard": False,
-                "standings": [],
-                "week_numbers": [],
-                "yahoo_rows": [],
-                "points_for_rows": [],
-                "mamba_rows": [],
                 "matchups": data.get("matchups", []),
             },
         )
@@ -98,12 +92,10 @@ def live_dashboard_home(
         "home.html",
         {
             **common_context,
-            "show_scoring_dashboard": True,
             "standings": standings,
             "week_numbers": week_numbers,
             "yahoo_rows": yahoo_rows,
             "points_for_rows": points_for_rows,
             "mamba_rows": mamba_rows,
-            "matchups": [],
         },
     )

@@ -7,6 +7,7 @@ from starlette.middleware.sessions import SessionMiddleware
 from app.routes import router
 from app.week_selector import HistoricalWeekSelectorMiddleware
 from app.yahoo_auth import yahoo_router
+from app.yahoo_history import history_router
 from app.yahoo_mamba import mamba_yahoo_router
 
 
@@ -29,3 +30,4 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 app.include_router(router)
 app.include_router(yahoo_router)
 app.include_router(mamba_yahoo_router)
+app.include_router(history_router)

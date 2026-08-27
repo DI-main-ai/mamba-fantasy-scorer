@@ -9,6 +9,7 @@ from app.week_selector import HistoricalWeekSelectorMiddleware
 from app.yahoo_auth import yahoo_router
 from app.yahoo_history import history_router
 from app.yahoo_mamba import mamba_yahoo_router
+from app.yahoo_seasons import season_router
 
 
 app = FastAPI(
@@ -31,3 +32,4 @@ app.include_router(router)
 app.include_router(yahoo_router)
 app.include_router(mamba_yahoo_router)
 app.include_router(history_router)
+app.include_router(season_router)

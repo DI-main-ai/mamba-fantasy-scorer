@@ -86,6 +86,14 @@
     <footer class="site-footer">
         <p>
             Powered by the Mamba Scoring System
+            {% if yahoo_source %}
+                · Fantasy data provided by
+                <a
+                    href="https://football.fantasysports.yahoo.com/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                >Yahoo Fantasy</a>
+            {% endif %}
         </p>
     </footer>
 </body>

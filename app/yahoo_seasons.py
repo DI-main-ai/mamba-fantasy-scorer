@@ -1,3 +1,4 @@
+import os
 import re
 import urllib.parse
 from collections import deque
@@ -13,6 +14,15 @@ season_router = APIRouter(
     prefix="/auth/yahoo/mamba",
     tags=["yahoo-mamba-seasons"],
 )
+
+# Yahoo's explicit renewal chain stops at 2014 for this league. These optional
+# environment variables let us attach the verified predecessor leagues without
+# exposing private league identifiers in the public repository.
+MANUAL_LEAGUE_ENV_BY_SEASON = {
+    2013: "YAHOO_LEAGUE_KEY_2013",
+    2012: "YAHOO_LEAGUE_KEY_2012",
+    2011: "YAHOO_LEAGUE_KEY_2011",
+}
 
 
 def _walk_values_for_key(node: Any, wanted_key: str) -> Iterable[Any]:
@@ -102,13 +112,50 @@ def _league_record(resource: Any) -> Optional[Dict[str, Any]]:
     }
 
 
+def _manual_legacy_records(request: Request) -> List[Dict[str, Any]]:
+    """Fetch manually verified predecessor leagues from Render env vars."""
+
+    records: List[Dict[str, Any]] = []
+
+    for expected_season, env_name in MANUAL_LEAGUE_ENV_BY_SEASON.items():
+        raw_key = os.getenv(env_name, "").strip()
+        league_key = _normalize_league_key(raw_key)
+        if not league_key:
+            continue
+
+        encoded_key = urllib.parse.quote(league_key, safe=".-_")
+        payload = _fantasy_get(request, f"league/{encoded_key}")
+        resource = payload.get("fantasy_content", {}).get("league", {})
+        record = _league_record(resource)
+
+        if record is None:
+            metadata = _league_metadata(payload)
+            record = {
+                "league_key": league_key,
+                "season": int(metadata.get("season") or expected_season),
+                "name": str(metadata.get("name") or ""),
+                "renew": _normalize_league_key(_first_value(resource, "renew")),
+                "renewed": _normalize_league_key(_first_value(resource, "renewed")),
+            }
+
+        # The env var itself declares which Mamba season this key belongs to.
+        # Keep Yahoo's metadata for name/links, but pin the expected year so a
+        # malformed response cannot attach a verified league to the wrong slot.
+        record["season"] = expected_season
+        records.append(record)
+
+    return records
+
+
 def discover_mamba_seasons(request: Request) -> List[Dict[str, Any]]:
     """Discover seasons linked to the configured Mamba league.
 
     Yahoo's `renew` field points to the previous season and `renewed` points
     to the next season. We build the chain in both directions and also follow
     reverse links returned by the user's complete NFL league history. Exact
-    league-name matching is only a fallback for manually linked history.
+    league-name matching is a fallback for manually linked history, and the
+    verified 2011-2013 predecessor leagues can be supplied through environment
+    variables when Yahoo's renewal chain no longer reaches them.
     """
     current_key = _target_league_key()
     encoded_current = urllib.parse.quote(current_key, safe=".-_")
@@ -170,22 +217,25 @@ def discover_mamba_seasons(request: Request) -> List[Dict[str, Any]]:
     # the exact same name as a pragmatic fallback.
     current_name = current_record.get("name", "").strip().casefold()
     if current_name:
+        connected_keys = {item["league_key"] for item in connected}
         for record in records.values():
             if record.get("name", "").strip().casefold() == current_name:
-                if record["league_key"] not in {item["league_key"] for item in connected}:
+                if record["league_key"] not in connected_keys:
                     connected.append(record)
+                    connected_keys.add(record["league_key"])
 
-    # De-duplicate by season, preferring the explicitly connected/current
-    # record when more than one Yahoo league happens to have the same name.
-    by_season: Dict[int, Dict[str, Any]] = {}
+    # Explicitly attach the verified 2011-2013 predecessors. This is the bridge
+    # across Yahoo's broken 2013 -> 2014 renewal history.
     connected_keys = {item["league_key"] for item in connected}
-    for record in sorted(
-        connected,
-        key=lambda item: (
-            item["league_key"] not in connected_keys,
-            -int(item["season"]),
-        ),
-    ):
+    for record in _manual_legacy_records(request):
+        if record["league_key"] not in connected_keys:
+            connected.append(record)
+            connected_keys.add(record["league_key"])
+
+    # De-duplicate by season. The explicit/manual records above are already the
+    # intended Mamba league for their respective years.
+    by_season: Dict[int, Dict[str, Any]] = {}
+    for record in sorted(connected, key=lambda item: -int(item["season"])):
         by_season.setdefault(int(record["season"]), record)
 
     return [by_season[season] for season in sorted(by_season, reverse=True)]

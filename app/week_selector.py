@@ -107,7 +107,12 @@ def build_period_selector(selected_week: int) -> str:
 
     return f"""
         <div class="period-controls">
-            <form class="period-selector" method="get" action="/">
+            <form
+                id="period-selector-form"
+                class="period-selector"
+                method="get"
+                action="/"
+            >
                 <label class="period-field">
                     <span>Season</span>
                     <select
@@ -122,10 +127,9 @@ def build_period_selector(selected_week: int) -> str:
                 <label class="period-field">
                     <span>Through Week</span>
                     <select
+                        id="period-week-select"
                         class="period-week-select"
-                        name="week"
                         aria-label="Through Week"
-                        onchange="this.form.submit()"
                     >
                         {week_options}
                     </select>
@@ -143,15 +147,16 @@ def build_period_selector(selected_week: int) -> str:
         </div>
         <script>
         (function () {{
+            const form = document.getElementById('period-selector-form');
             const seasonSelect = document.getElementById('period-season-select');
-            const weekSelect = document.querySelector('.period-week-select');
+            const weekSelect = document.getElementById('period-week-select');
             const seasonNote = document.getElementById('period-season-note');
 
-            if (!seasonSelect) return;
+            if (!form || !seasonSelect || !weekSelect) return;
 
-            seasonSelect.addEventListener('change', function () {{
-                const season = Number(this.value);
-                const week = weekSelect ? Number(weekSelect.value || 1) : 1;
+            function navigateToSelection() {{
+                const season = Number(seasonSelect.value || {HISTORICAL_SEASON});
+                const week = Number(weekSelect.value || 1);
 
                 if (season === {HISTORICAL_SEASON}) {{
                     window.location.href = '/?week=' + encodeURIComponent(week);
@@ -160,8 +165,16 @@ def build_period_selector(selected_week: int) -> str:
 
                 window.location.href =
                     '/auth/yahoo/mamba/history?season=' + encodeURIComponent(season) +
-                    '&week=1';
+                    '&week=' + encodeURIComponent(week);
+            }}
+
+            form.addEventListener('submit', function (event) {{
+                event.preventDefault();
+                navigateToSelection();
             }});
+
+            seasonSelect.addEventListener('change', navigateToSelection);
+            weekSelect.addEventListener('change', navigateToSelection);
 
             fetch('/auth/yahoo/mamba/seasons', {{
                 credentials: 'same-origin',

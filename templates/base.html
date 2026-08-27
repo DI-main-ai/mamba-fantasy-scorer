@@ -96,5 +96,42 @@
             {% endif %}
         </p>
     </footer>
+
+    <script>
+    (function () {
+        const auditSectionIds = [
+            'yahoo-breakdown',
+            'points-breakdown',
+            'mamba-breakdown'
+        ];
+
+        function scrollAuditTablesToLatestWeek() {
+            auditSectionIds.forEach(function (sectionId) {
+                const section = document.getElementById(sectionId);
+                if (!section) return;
+
+                const scroller = section.querySelector('.table-scroll');
+                if (!scroller) return;
+
+                scroller.scrollLeft = Math.max(
+                    0,
+                    scroller.scrollWidth - scroller.clientWidth
+                );
+            });
+        }
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', function () {
+                requestAnimationFrame(scrollAuditTablesToLatestWeek);
+            });
+        } else {
+            requestAnimationFrame(scrollAuditTablesToLatestWeek);
+        }
+
+        window.addEventListener('load', function () {
+            requestAnimationFrame(scrollAuditTablesToLatestWeek);
+        });
+    })();
+    </script>
 </body>
 </html>

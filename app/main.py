@@ -9,6 +9,7 @@ from app.routes import router
 from app.week_selector import HistoricalWeekSelectorMiddleware
 from app.yahoo_auth import yahoo_router
 from app.yahoo_history import history_router
+from app.yahoo_legacy_candidates import legacy_candidate_router
 from app.yahoo_mamba import mamba_yahoo_router
 from app.yahoo_seasons import season_router
 from app.yahoo_shared_auth import (
@@ -51,3 +52,4 @@ app.include_router(storage_status_router)
 app.include_router(mamba_yahoo_router)
 app.include_router(history_router)
 app.include_router(season_router)
+app.include_router(legacy_candidate_router)

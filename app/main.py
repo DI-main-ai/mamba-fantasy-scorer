@@ -11,12 +11,16 @@ from app.yahoo_auth import yahoo_router
 from app.yahoo_history import history_router
 from app.yahoo_mamba import mamba_yahoo_router
 from app.yahoo_seasons import season_router
-from app.yahoo_shared_auth import install_shared_yahoo_auth
+from app.yahoo_shared_auth import (
+    install_shared_yahoo_auth,
+    storage_status_router,
+)
 
 
 # Mamba uses one approved read-only Yahoo account for one private league. A
-# successful Yahoo authorization is therefore shared server-side so desktop,
-# mobile, and other league viewers do not each need their own Yahoo login.
+# successful Yahoo authorization is shared server-side so desktop, mobile, and
+# other league viewers do not each need their own Yahoo login. Upstash provides
+# persistence across Render spin-downs, restarts, and deploys when configured.
 install_shared_yahoo_auth()
 
 
@@ -43,6 +47,7 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 app.include_router(live_dashboard_router)
 app.include_router(router)
 app.include_router(yahoo_router)
+app.include_router(storage_status_router)
 app.include_router(mamba_yahoo_router)
 app.include_router(history_router)
 app.include_router(season_router)

@@ -11,6 +11,13 @@ from app.yahoo_auth import yahoo_router
 from app.yahoo_history import history_router
 from app.yahoo_mamba import mamba_yahoo_router
 from app.yahoo_seasons import season_router
+from app.yahoo_shared_auth import install_shared_yahoo_auth
+
+
+# Mamba uses one approved read-only Yahoo account for one private league. A
+# successful Yahoo authorization is therefore shared server-side so desktop,
+# mobile, and other league viewers do not each need their own Yahoo login.
+install_shared_yahoo_auth()
 
 
 app = FastAPI(

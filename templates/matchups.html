@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+
+{% block title %}
+    Mamba Fantasy
+{% endblock %}
+
+{% block content %}
+<section class="hero">
+    <div class="hero-glow hero-glow-purple"></div>
+    <div class="hero-glow hero-glow-gold"></div>
+
+    <div class="hero-content">
+        <div class="eyebrow">
+            <span class="eyebrow-dot"></span>
+            {{ season }} Season Dashboard
+        </div>
+
+        <h1>
+            Mamba Fantasy Football
+            <span>{{ season }}</span>
+        </h1>
+
+        <p class="hero-description">
+            Mamba and Hybrid scoring stop after Week 13.
+            Yahoo matchups remain available for the rest of the season.
+        </p>
+
+        <div class="hero-navigation">
+            <div class="hero-nav-buttons">
+                <a class="dashboard-button dashboard-button-primary" href="#yahoo-matchups">
+                    Yahoo Matchups
+                </a>
+            </div>
+
+            <span class="updated-label">
+                Through Week {{ current_week }}
+            </span>
+        </div>
+    </div>
+
+    <div class="hero-badge" aria-hidden="true">
+        <div class="badge-ring">
+            <img
+                src="{{ url_for('static', path='images/mamba-logo-transparent.png') }}"
+                alt=""
+                class="hero-logo"
+                width="140"
+                height="140"
+                style="display:block;width:140px;height:140px;object-fit:contain;"
+            >
+        </div>
+    </div>
+</section>
+
+<section id="yahoo-matchups" class="dashboard-section">
+    <div class="section-heading">
+        <div>
+            <p class="section-kicker section-kicker-gold">Official Yahoo Results</p>
+            <h2>Week {{ current_week }} Matchups</h2>
+            <p class="section-description">
+                Weeks 14 and later are shown for Yahoo matchup tracking only.
+                They do not add Mamba Points or affect Hybrid standings.
+            </p>
+        </div>
+
+        <div class="week-pill">Week {{ current_week }}</div>
+    </div>
+
+    <div class="standings-card table-card">
+        <div class="table-scroll">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Matchup</th>
+                        <th>Team</th>
+                        <th>Score</th>
+                        <th>Opponent</th>
+                        <th>Score</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for matchup in matchups %}
+                        {% set first = matchup.teams[0] %}
+                        {% set second = matchup.teams[1] %}
+                        <tr>
+                            <td>{{ loop.index }}</td>
+                            <td>
+                                {{ first.name }}
+                                {% if matchup.winner_team_key == first.team_key %} ✓{% endif %}
+                            </td>
+                            <td class="strong-value">
+                                {% if first.score is not none %}{{ "%.2f" | format(first.score) }}{% else %}—{% endif %}
+                            </td>
+                            <td>
+                                {{ second.name }}
+                                {% if matchup.winner_team_key == second.team_key %} ✓{% endif %}
+                            </td>
+                            <td class="strong-value">
+                                {% if second.score is not none %}{{ "%.2f" | format(second.score) }}{% else %}—{% endif %}
+                            </td>
+                        </tr>
+                    {% else %}
+                        <tr>
+                            <td colspan="5">Yahoo has not returned matchup data for this week yet.</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</section>
+{% endblock %}

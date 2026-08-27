@@ -249,12 +249,26 @@ class HistoricalWeekSelectorMiddleware(BaseHTTPMiddleware):
             )
 
         selected_week = int(week_match.group(1))
-        try:
-            selected_season = int(
-                request.query_params.get("season", str(DEFAULT_SEASON))
+        season_param = request.query_params.get("season")
+
+        if season_param is not None:
+            try:
+                selected_season = int(season_param)
+            except (TypeError, ValueError):
+                selected_season = DEFAULT_SEASON
+        else:
+            # The root URL now resolves the newest Yahoo season server-side.
+            # Read the rendered header so the selector reflects that resolved
+            # season instead of incorrectly falling back to 2025.
+            season_match = re.search(
+                r'<span class="season-label">\s*(\d{4})\s+Season\s*</span>',
+                html,
             )
-        except (TypeError, ValueError):
-            selected_season = DEFAULT_SEASON
+            selected_season = (
+                int(season_match.group(1))
+                if season_match is not None
+                else DEFAULT_SEASON
+            )
 
         selector = build_period_selector(selected_week, selected_season)
 

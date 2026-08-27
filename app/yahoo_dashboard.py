@@ -10,7 +10,19 @@ from app.yahoo_seasons import discover_mamba_seasons
 
 
 MAMBA_SCORING_END_WEEK = 13
+SPECIAL_MAMBA_SCORING_END_WEEKS = {
+    2024: 14,
+}
 MAX_YAHOO_WEEK = 18
+
+
+def mamba_scoring_end_week(season: int) -> int:
+    """Return the final week used for Mamba/Hybrid scoring for a season."""
+
+    return SPECIAL_MAMBA_SCORING_END_WEEKS.get(
+        int(season),
+        MAMBA_SCORING_END_WEEK,
+    )
 
 
 def _as_int(value: Any, default: int) -> int:
@@ -105,8 +117,8 @@ def load_yahoo_dashboard_data(
 ) -> Dict[str, Any]:
     """Load one Mamba League season from Yahoo for the shared dashboard UI.
 
-    Mamba/Hybrid calculations intentionally stop after Week 13. Weeks 14+
-    return Yahoo matchup data only.
+    Mamba/Hybrid calculations stop after Week 13 for every season except 2024,
+    which includes Week 14. Later weeks return Yahoo matchup data only.
     """
 
     season_record = _resolve_season_record(request, season)
@@ -125,12 +137,13 @@ def load_yahoo_dashboard_data(
     end_week = _as_int(metadata.get("end_week"), MAX_YAHOO_WEEK)
     end_week = max(1, min(end_week, MAX_YAHOO_WEEK))
     current_week = _as_int(metadata.get("current_week"), 1)
+    scoring_end_week = min(mamba_scoring_end_week(season), end_week)
 
     if requested_week is None:
         if season >= 2026:
             selected_week = max(1, min(current_week, end_week))
         else:
-            selected_week = min(MAMBA_SCORING_END_WEEK, end_week)
+            selected_week = scoring_end_week
     else:
         selected_week = max(1, min(int(requested_week), end_week))
 
@@ -143,7 +156,7 @@ def load_yahoo_dashboard_data(
 
     available_weeks = list(range(1, end_week + 1))
 
-    if selected_week > MAMBA_SCORING_END_WEEK:
+    if selected_week > scoring_end_week:
         scoreboard_payload = _fantasy_get(
             request,
             f"league/{encoded_key}/scoreboard;week={selected_week}",

@@ -296,6 +296,104 @@ def build_mamba_audit_rows(
     return rows
 
 
+def add_previous_week_rank_changes(
+    *,
+    weeks: Dict[str, Dict[str, float]],
+    weekly_mamba_points: Dict[str, Dict[str, float]],
+    yahoo_teams: Dict[str, Dict[str, Any]],
+    week_numbers: List[str],
+    standings: List[Any],
+    yahoo_rows: List[Dict[str, Any]],
+    points_for_rows: List[Dict[str, Any]],
+    mamba_rows: List[Dict[str, Any]],
+) -> None:
+    """Annotate each table row with movement versus the prior cumulative week.
+
+    Positive values mean the team moved up in that table (for example, +2 means
+    #5 last week to #3 this week). Negative values mean the team moved down.
+    Week 1 has no prior comparison, so movement is left as ``None``.
+    """
+
+    for standing in standings:
+        setattr(standing, "rank_change", None)
+    for row in yahoo_rows:
+        row["rank_change"] = None
+    for row in points_for_rows:
+        row["rank_change"] = None
+    for row in mamba_rows:
+        row["rank_change"] = None
+
+    if len(week_numbers) <= 1:
+        return
+
+    previous_week_numbers = week_numbers[:-1]
+    previous_weeks = {
+        week_number: weeks[week_number]
+        for week_number in previous_week_numbers
+    }
+    previous_mamba_points = {
+        week_number: weekly_mamba_points[week_number]
+        for week_number in previous_week_numbers
+    }
+
+    previous_yahoo_rows, previous_yahoo_ranks = build_yahoo_snapshot(
+        yahoo_teams=yahoo_teams,
+        weeks=previous_weeks,
+        week_numbers=previous_week_numbers,
+    )
+    previous_standings = build_hybrid_standings(
+        weeks=previous_weeks,
+        yahoo_ranks=previous_yahoo_ranks,
+    )
+    previous_points_rows = build_points_for_audit_rows(
+        weeks=previous_weeks,
+        week_numbers=previous_week_numbers,
+        standings=previous_standings,
+    )
+    previous_mamba_rows = build_mamba_audit_rows(
+        weekly_mamba_points=previous_mamba_points,
+        week_numbers=previous_week_numbers,
+        standings=previous_standings,
+    )
+
+    previous_hybrid_rank = {
+        row.team_name: int(row.final_rank)
+        for row in previous_standings
+    }
+    previous_yahoo_rank = {
+        row["team_name"]: int(row["rank"])
+        for row in previous_yahoo_rows
+    }
+    previous_points_rank = {
+        row["team_name"]: int(row["rank"])
+        for row in previous_points_rows
+    }
+    previous_mamba_rank = {
+        row["team_name"]: int(row["rank"])
+        for row in previous_mamba_rows
+    }
+
+    for standing in standings:
+        old_rank = previous_hybrid_rank.get(standing.team_name)
+        if old_rank is not None:
+            standing.rank_change = old_rank - int(standing.final_rank)
+
+    for row in yahoo_rows:
+        old_rank = previous_yahoo_rank.get(row["team_name"])
+        if old_rank is not None:
+            row["rank_change"] = old_rank - int(row["rank"])
+
+    for row in points_for_rows:
+        old_rank = previous_points_rank.get(row["team_name"])
+        if old_rank is not None:
+            row["rank_change"] = old_rank - int(row["rank"])
+
+    for row in mamba_rows:
+        old_rank = previous_mamba_rank.get(row["team_name"])
+        if old_rank is not None:
+            row["rank_change"] = old_rank - int(row["rank"])
+
+
 @router.get("/", response_class=HTMLResponse)
 def home(
     request: Request,
@@ -403,6 +501,17 @@ def home(
         weekly_mamba_points=weekly_mamba_points,
         week_numbers=week_numbers,
         standings=standings,
+    )
+
+    add_previous_week_rank_changes(
+        weeks=weeks,
+        weekly_mamba_points=weekly_mamba_points,
+        yahoo_teams=yahoo_teams,
+        week_numbers=week_numbers,
+        standings=standings,
+        yahoo_rows=yahoo_rows,
+        points_for_rows=points_for_rows,
+        mamba_rows=mamba_rows,
     )
 
     return templates.TemplateResponse(

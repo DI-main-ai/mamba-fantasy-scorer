@@ -110,6 +110,63 @@ def _result_for_team(
     return "P"
 
 
+def _matchups_have_scoring_data(matchups: List[Dict[str, Any]]) -> bool:
+    """Return True once Yahoo has meaningful activity for a fantasy week."""
+
+    final_statuses = {"postevent", "final", "complete", "completed"}
+
+    for matchup in matchups:
+        if matchup.get("winner_team_key"):
+            return True
+
+        if str(matchup.get("status") or "").lower() in final_statuses:
+            return True
+
+        for team in matchup.get("teams", []):
+            score = team.get("score")
+            if score is None:
+                continue
+            try:
+                if float(score) != 0.0:
+                    return True
+            except (TypeError, ValueError):
+                continue
+
+    return False
+
+
+def _latest_week_with_data(
+    request: Request,
+    encoded_key: str,
+    team_names_by_key: Dict[str, str],
+    current_week: int,
+    end_week: int,
+) -> int:
+    """Find the newest current-season week that has started producing data.
+
+    Before the first 2026 game every Week 1 score is 0, so we deliberately
+    return Week 1 when no week has activity yet. Between fantasy weeks, this
+    keeps the homepage on the most recently completed week until the new week
+    begins producing Yahoo scores.
+    """
+
+    newest_candidate = max(1, min(current_week, end_week))
+
+    for week_number in range(newest_candidate, 0, -1):
+        scoreboard_payload = _fantasy_get(
+            request,
+            f"league/{encoded_key}/scoreboard;week={week_number}",
+        )
+        matchups = _normalize_matchups(
+            _extract_matchups(scoreboard_payload),
+            team_names_by_key,
+        )
+        if _matchups_have_scoring_data(matchups):
+            return week_number
+
+    return 1
+
+
 def load_yahoo_dashboard_data(
     request: Request,
     season: int,
@@ -139,20 +196,26 @@ def load_yahoo_dashboard_data(
     current_week = _as_int(metadata.get("current_week"), 1)
     scoring_end_week = min(mamba_scoring_end_week(season), end_week)
 
-    if requested_week is None:
-        if season >= 2026:
-            selected_week = max(1, min(current_week, end_week))
-        else:
-            selected_week = scoring_end_week
-    else:
-        selected_week = max(1, min(int(requested_week), end_week))
-
     teams_payload = _fantasy_get(request, f"league/{encoded_key}/teams")
     teams = _extract_unique_teams(teams_payload)
     team_names_by_key = {
         str(team["team_key"]): str(team["name"])
         for team in teams
     }
+
+    if requested_week is None:
+        if season >= 2026:
+            selected_week = _latest_week_with_data(
+                request=request,
+                encoded_key=encoded_key,
+                team_names_by_key=team_names_by_key,
+                current_week=current_week,
+                end_week=end_week,
+            )
+        else:
+            selected_week = scoring_end_week
+    else:
+        selected_week = max(1, min(int(requested_week), end_week))
 
     available_weeks = list(range(1, end_week + 1))
 

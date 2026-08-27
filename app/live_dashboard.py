@@ -27,7 +27,9 @@ def live_dashboard_home(
 
     The validated 2025 JSON test remains the source for Weeks 1-13 of 2025 so
     it continues to serve as our regression baseline. Every other season is
-    read live from Yahoo. Week 14+ intentionally shows Yahoo matchups only.
+    read live from Yahoo. Mamba/Hybrid scoring runs through Week 13 for all
+    seasons except 2024, which runs through Week 14; later weeks show Yahoo
+    matchups only.
     """
 
     if season == 2025 and (week is None or week <= MAMBA_SCORING_END_WEEK):

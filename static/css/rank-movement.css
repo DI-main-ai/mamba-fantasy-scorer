@@ -1,8 +1,28 @@
+.team-cell-content {
+    min-width: 0;
+}
+
+.team-information {
+    min-width: 0;
+    flex: 1 1 auto;
+    overflow: hidden;
+}
+
 .team-name-line {
+    width: 100%;
     min-width: 0;
     display: flex;
     align-items: center;
     gap: 7px;
+    overflow: hidden;
+}
+
+.team-name-line .team-name {
+    min-width: 0;
+    flex: 1 1 auto;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .rank-movement {
@@ -38,6 +58,10 @@
 @media (max-width: 620px) {
     .team-name-line {
         gap: 5px;
+    }
+
+    .team-name-line .team-name {
+        max-width: none;
     }
 
     .rank-movement {

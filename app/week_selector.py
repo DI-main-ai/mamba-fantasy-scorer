@@ -8,6 +8,10 @@ from starlette.responses import Response
 
 DEFAULT_SEASON = 2025
 MAXIMUM_WEEK = 18
+DEFAULT_MAMBA_WEEK = 13
+SEASON_DEFAULT_WEEKS = {
+    2024: 14,
+}
 
 PERIOD_SELECTOR_STYLES = """
 <style>
@@ -105,6 +109,10 @@ def build_period_selector(selected_week: int, selected_season: int) -> str:
         for week_number in range(1, MAXIMUM_WEEK + 1)
     )
 
+    default_week_map = ", ".join(
+        f"{season}: {week}" for season, week in SEASON_DEFAULT_WEEKS.items()
+    )
+
     return f"""
         <div class="period-controls">
             <form
@@ -153,11 +161,15 @@ def build_period_selector(selected_week: int, selected_season: int) -> str:
             const weekSelect = document.getElementById('period-week-select');
             const seasonNote = document.getElementById('period-season-note');
             const selectedSeason = {selected_season};
+            const seasonDefaultWeeks = {{{default_week_map}}};
+            const standardDefaultWeek = {DEFAULT_MAMBA_WEEK};
 
             if (!form || !seasonSelect || !weekSelect) return;
 
             seasonSelect.addEventListener('change', function () {{
-                weekSelect.value = '1';
+                const season = Number(this.value);
+                const defaultWeek = seasonDefaultWeeks[season] || standardDefaultWeek;
+                weekSelect.value = String(defaultWeek);
                 form.submit();
             }});
 

@@ -1,13 +1,13 @@
 import re
-from typing import AsyncIterator
+from typing import Optional
 
 from fastapi import Request
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import Response
 
 
-HISTORICAL_SEASON = 2025
-MAXIMUM_HISTORICAL_WEEK = 13
+DEFAULT_SEASON = 2025
+MAXIMUM_WEEK = 18
 
 PERIOD_SELECTOR_STYLES = """
 <style>
@@ -95,14 +95,14 @@ PERIOD_SELECTOR_STYLES = """
 """
 
 
-def build_period_selector(selected_week: int) -> str:
+def build_period_selector(selected_week: int, selected_season: int) -> str:
     week_options = "".join(
         (
             f'<option value="{week_number}" '
             f'{"selected" if week_number == selected_week else ""}>'
             f'Week {week_number}</option>'
         )
-        for week_number in range(1, MAXIMUM_HISTORICAL_WEEK + 1)
+        for week_number in range(1, MAXIMUM_WEEK + 1)
     )
 
     return f"""
@@ -117,19 +117,20 @@ def build_period_selector(selected_week: int) -> str:
                     <span>Season</span>
                     <select
                         id="period-season-select"
+                        name="season"
                         aria-label="Season"
                     >
-                        <option value="{HISTORICAL_SEASON}" selected>
-                            {HISTORICAL_SEASON}
+                        <option value="{selected_season}" selected>
+                            {selected_season}
                         </option>
                     </select>
                 </label>
                 <label class="period-field">
-                    <span>Through Week</span>
+                    <span>Week</span>
                     <select
                         id="period-week-select"
-                        class="period-week-select"
-                        aria-label="Through Week"
+                        name="week"
+                        aria-label="Week"
                     >
                         {week_options}
                     </select>
@@ -139,7 +140,7 @@ def build_period_selector(selected_week: int) -> str:
                 </button>
             </form>
             <span class="updated-label">
-                Recalculated through Week {selected_week}
+                Through Week {selected_week}
             </span>
             <span class="period-season-note" id="period-season-note">
                 Loading Yahoo league seasons…
@@ -151,30 +152,18 @@ def build_period_selector(selected_week: int) -> str:
             const seasonSelect = document.getElementById('period-season-select');
             const weekSelect = document.getElementById('period-week-select');
             const seasonNote = document.getElementById('period-season-note');
+            const selectedSeason = {selected_season};
 
             if (!form || !seasonSelect || !weekSelect) return;
 
-            function navigateToSelection() {{
-                const season = Number(seasonSelect.value || {HISTORICAL_SEASON});
-                const week = Number(weekSelect.value || 1);
-
-                if (season === {HISTORICAL_SEASON}) {{
-                    window.location.href = '/?week=' + encodeURIComponent(week);
-                    return;
-                }}
-
-                window.location.href =
-                    '/auth/yahoo/mamba/history?season=' + encodeURIComponent(season) +
-                    '&week=' + encodeURIComponent(week);
-            }}
-
-            form.addEventListener('submit', function (event) {{
-                event.preventDefault();
-                navigateToSelection();
+            seasonSelect.addEventListener('change', function () {{
+                weekSelect.value = '1';
+                form.submit();
             }});
 
-            seasonSelect.addEventListener('change', navigateToSelection);
-            weekSelect.addEventListener('change', navigateToSelection);
+            weekSelect.addEventListener('change', function () {{
+                form.submit();
+            }});
 
             fetch('/auth/yahoo/mamba/seasons', {{
                 credentials: 'same-origin',
@@ -189,8 +178,8 @@ def build_period_selector(selected_week: int) -> str:
                     ? data.season_numbers.map(Number)
                     : [];
 
-                if (!seasons.includes({HISTORICAL_SEASON})) {{
-                    seasons.push({HISTORICAL_SEASON});
+                if (!seasons.includes(selectedSeason)) {{
+                    seasons.push(selectedSeason);
                 }}
 
                 seasons.sort(function (a, b) {{ return b - a; }});
@@ -200,15 +189,12 @@ def build_period_selector(selected_week: int) -> str:
                     const option = document.createElement('option');
                     option.value = String(season);
                     option.textContent = String(season);
-                    if (season === {HISTORICAL_SEASON}) option.selected = true;
+                    option.selected = season === selectedSeason;
                     seasonSelect.appendChild(option);
                 }});
 
                 if (seasonNote) {{
-                    seasonNote.textContent =
-                        seasons.length > 1
-                            ? 'Yahoo league history loaded.'
-                            : 'Only the 2025 historical season is currently linked.';
+                    seasonNote.textContent = 'Yahoo league history loaded.';
                 }}
             }})
             .catch(function () {{
@@ -223,7 +209,7 @@ def build_period_selector(selected_week: int) -> str:
 
 
 class HistoricalWeekSelectorMiddleware(BaseHTTPMiddleware):
-    """Add the historical week selector to the rendered dashboard."""
+    """Add the multi-season selector to the rendered dashboard."""
 
     async def dispatch(self, request: Request, call_next):
         response = await call_next(request)
@@ -232,20 +218,16 @@ class HistoricalWeekSelectorMiddleware(BaseHTTPMiddleware):
             return response
 
         content_type = response.headers.get("content-type", "")
-
         if "text/html" not in content_type:
             return response
 
-        body = b"".join(
-            [chunk async for chunk in response.body_iterator]
-        )
+        body = b"".join([chunk async for chunk in response.body_iterator])
         html = body.decode("utf-8")
 
         week_match = re.search(
             r'<span class="updated-label">\s*Through Week (\d+)\s*</span>',
             html,
         )
-
         if week_match is None:
             return Response(
                 content=body,
@@ -255,7 +237,14 @@ class HistoricalWeekSelectorMiddleware(BaseHTTPMiddleware):
             )
 
         selected_week = int(week_match.group(1))
-        selector = build_period_selector(selected_week)
+        try:
+            selected_season = int(
+                request.query_params.get("season", str(DEFAULT_SEASON))
+            )
+        except (TypeError, ValueError):
+            selected_season = DEFAULT_SEASON
+
+        selector = build_period_selector(selected_week, selected_season)
 
         html = re.sub(
             r'<span class="updated-label">\s*Through Week \d+\s*</span>',

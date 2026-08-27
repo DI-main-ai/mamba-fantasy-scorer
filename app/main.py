@@ -4,6 +4,7 @@ from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.sessions import SessionMiddleware
 
+from app.live_dashboard import live_dashboard_router
 from app.routes import router
 from app.week_selector import HistoricalWeekSelectorMiddleware
 from app.yahoo_auth import yahoo_router
@@ -28,6 +29,11 @@ app.add_middleware(
     https_only=os.getenv("RENDER", "").lower() == "true",
 )
 app.mount("/static", StaticFiles(directory="static"), name="static")
+
+# Register the multi-season dashboard before the original 2025 route so "/"
+# is handled by the Yahoo-aware season router while the original function can
+# still be called internally as the validated 2025 regression baseline.
+app.include_router(live_dashboard_router)
 app.include_router(router)
 app.include_router(yahoo_router)
 app.include_router(mamba_yahoo_router)

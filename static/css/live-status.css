@@ -1,3 +1,5 @@
+@import url("/static/css/matchups.css");
+
 .header-status-block {
     display: flex;
     flex-direction: column;
@@ -33,19 +35,12 @@
     box-shadow: 0 0 9px rgba(101, 217, 151, 0.65);
 }
 
-.yahoo-refresh-status.is-live .yahoo-refresh-mode {
-    color: var(--green);
-}
-
-.yahoo-refresh-status.is-stale {
-    color: var(--red);
-}
-
+.yahoo-refresh-status.is-live .yahoo-refresh-mode { color: var(--green); }
+.yahoo-refresh-status.is-stale { color: var(--red); }
 .yahoo-refresh-status.is-stale .yahoo-refresh-dot {
     background: var(--red);
     box-shadow: 0 0 9px rgba(255, 124, 124, 0.55);
 }
-
 .yahoo-refresh-mode {
     color: var(--purple-light);
     font-size: 9px;
@@ -53,27 +48,17 @@
     letter-spacing: 0.08em;
     text-transform: uppercase;
 }
-
-.yahoo-refresh-time {
-    color: inherit;
-}
+.yahoo-refresh-time { color: inherit; }
 
 @media (max-width: 620px) {
-    .header-status-block {
-        gap: 4px;
-    }
-
+    .header-status-block { gap: 4px; }
     .yahoo-refresh-status {
         max-width: 205px;
         gap: 5px;
         font-size: 8px;
         white-space: normal;
     }
-
-    .yahoo-refresh-mode {
-        font-size: 8px;
-    }
-
+    .yahoo-refresh-mode { font-size: 8px; }
     .yahoo-refresh-dot {
         width: 5px;
         height: 5px;

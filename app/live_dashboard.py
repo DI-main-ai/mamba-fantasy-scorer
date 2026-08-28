@@ -22,10 +22,18 @@ live_dashboard_router = APIRouter()
 
 
 def _latest_available_season(request: Request) -> int:
-    seasons = discover_mamba_seasons(request)
-    if not seasons:
-        return 2025
-    return max(int(item["season"]) for item in seasons)
+    """Resolve the newest season, with a safe current-year outage fallback."""
+
+    try:
+        seasons = discover_mamba_seasons(request)
+        if seasons:
+            return max(int(item["season"]) for item in seasons)
+    except Exception as exc:
+        # If Yahoo's league-history endpoint is temporarily unavailable, the
+        # current-year dashboard cache can still serve the last known good data.
+        print(f"WARNING: Yahoo season discovery failed; using current year: {exc}")
+
+    return max(2025, datetime.now(timezone.utc).year)
 
 
 @live_dashboard_router.get("/", response_class=HTMLResponse)

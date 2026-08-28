@@ -10,8 +10,8 @@ from app.yahoo_dashboard import load_yahoo_dashboard_data
 from app.yahoo_shared_auth import _upstash_command, _upstash_config
 
 
-CACHE_PREFIX = "mamba:yahoo:dashboard:v3"
-LOCK_PREFIX = "mamba:yahoo:dashboard-lock:v3"
+CACHE_PREFIX = "mamba:yahoo:dashboard:v4"
+LOCK_PREFIX = "mamba:yahoo:dashboard-lock:v4"
 LIVE_REFRESH_SECONDS = 45
 IDLE_REFRESH_SECONDS = 300
 HISTORICAL_REFRESH_SECONDS = 3600

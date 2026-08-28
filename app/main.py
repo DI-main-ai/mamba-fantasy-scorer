@@ -19,7 +19,7 @@ from app.yahoo_shared_auth import (
 )
 
 
-# Deployment trigger test: this comment has no effect on application behavior.
+# Deployment trigger test after installing the Render GitHub App.
 # Mamba uses one approved read-only Yahoo account for one private league. A
 # successful Yahoo authorization is shared server-side so desktop, mobile, and
 # other league viewers do not each need their own Yahoo login. Upstash provides

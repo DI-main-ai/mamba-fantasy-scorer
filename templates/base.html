@@ -36,6 +36,11 @@
         rel="stylesheet"
         href="{{ url_for('static', path='css/rank-movement.css') }}"
     >
+
+    <link
+        rel="stylesheet"
+        href="{{ url_for('static', path='css/live-status.css') }}"
+    >
 </head>
 
 <body>
@@ -69,16 +74,39 @@
                 </div>
             </a>
 
-            <div class="season-status">
-                <span class="season-label">
-                    {{ season }} Season
-                </span>
+            <div class="header-status-block">
+                <div class="season-status">
+                    <span class="season-label">
+                        {{ season }} Season
+                    </span>
 
-                <span class="status-divider"></span>
+                    <span class="status-divider"></span>
 
-                <span class="week-label">
-                    Week {{ current_week }}
-                </span>
+                    <span class="week-label">
+                        Week {{ current_week }}
+                    </span>
+                </div>
+
+                {% if yahoo_source and yahoo_refresh_epoch %}
+                <div
+                    id="yahoo-refresh-status"
+                    class="yahoo-refresh-status {% if yahoo_refresh_stale %}is-stale{% endif %}"
+                    data-season="{{ season }}"
+                    data-current-week="{{ current_week }}"
+                    data-requested-week="{% if live_refresh_requested_week is not none %}{{ live_refresh_requested_week }}{% endif %}"
+                    data-live-enabled="{% if live_refresh_enabled %}1{% else %}0{% endif %}"
+                    data-version="{{ yahoo_data_version }}"
+                    data-refreshed-at="{{ yahoo_refresh_epoch }}"
+                    data-refresh-seconds="{{ yahoo_refresh_interval_seconds }}"
+                    data-stale="{% if yahoo_refresh_stale %}1{% else %}0{% endif %}"
+                >
+                    <span class="yahoo-refresh-dot" aria-hidden="true"></span>
+                    <span class="yahoo-refresh-mode">Yahoo</span>
+                    <span class="yahoo-refresh-time" id="yahoo-refresh-time">
+                        Updated recently
+                    </span>
+                </div>
+                {% endif %}
             </div>
         </div>
     </header>
@@ -125,17 +153,175 @@
             });
         }
 
+        function restoreVerticalPosition() {
+            const saved = sessionStorage.getItem('mamba-live-scroll-y');
+            if (saved === null) return;
+            sessionStorage.removeItem('mamba-live-scroll-y');
+            const y = Number(saved);
+            if (Number.isFinite(y)) {
+                requestAnimationFrame(function () {
+                    window.scrollTo(0, y);
+                });
+            }
+        }
+
         if (document.readyState === 'loading') {
             document.addEventListener('DOMContentLoaded', function () {
                 requestAnimationFrame(scrollAuditTablesToLatestWeek);
+                restoreVerticalPosition();
             });
         } else {
             requestAnimationFrame(scrollAuditTablesToLatestWeek);
+            restoreVerticalPosition();
         }
 
         window.addEventListener('load', function () {
             requestAnimationFrame(scrollAuditTablesToLatestWeek);
         });
+    })();
+    </script>
+
+    <script>
+    (function () {
+        const status = document.getElementById('yahoo-refresh-status');
+        if (!status) return;
+
+        const timeLabel = document.getElementById('yahoo-refresh-time');
+        const modeLabel = status.querySelector('.yahoo-refresh-mode');
+        const season = Number(status.dataset.season || '0');
+        const pageWeek = Number(status.dataset.currentWeek || '1');
+        const requestedWeek = status.dataset.requestedWeek || '';
+        const liveEnabled = status.dataset.liveEnabled === '1';
+
+        let dataVersion = status.dataset.version || '';
+        let refreshedAt = Number(status.dataset.refreshedAt || '0');
+        let refreshSeconds = Math.max(
+            30,
+            Number(status.dataset.refreshSeconds || '300')
+        );
+        let stale = status.dataset.stale === '1';
+        let timer = null;
+
+        function formatClock(epochSeconds) {
+            if (!epochSeconds) return 'unknown time';
+            return new Date(epochSeconds * 1000).toLocaleTimeString([], {
+                hour: 'numeric',
+                minute: '2-digit',
+                second: '2-digit'
+            });
+        }
+
+        function relativeAge(epochSeconds) {
+            if (!epochSeconds) return '';
+            const seconds = Math.max(
+                0,
+                Math.round(Date.now() / 1000 - epochSeconds)
+            );
+            if (seconds < 10) return 'just now';
+            if (seconds < 60) return seconds + 's ago';
+            const minutes = Math.floor(seconds / 60);
+            if (minutes < 60) return minutes + 'm ago';
+            const hours = Math.floor(minutes / 60);
+            return hours + 'h ago';
+        }
+
+        function renderStatus(errorMessage) {
+            const liveMode = liveEnabled && refreshSeconds <= 60 && !stale;
+            status.classList.toggle('is-live', liveMode);
+            status.classList.toggle('is-stale', stale);
+
+            if (modeLabel) {
+                modeLabel.textContent = liveMode ? 'LIVE' : 'Yahoo';
+            }
+
+            if (!timeLabel) return;
+
+            if (stale) {
+                timeLabel.textContent =
+                    'Yahoo temporarily unavailable · showing ' +
+                    formatClock(refreshedAt);
+                return;
+            }
+
+            timeLabel.textContent =
+                'Updated ' + formatClock(refreshedAt) +
+                ' · ' + relativeAge(refreshedAt);
+        }
+
+        function scheduleNext(seconds) {
+            if (!liveEnabled) return;
+            if (timer) window.clearTimeout(timer);
+            timer = window.setTimeout(pollYahoo, Math.max(30, seconds) * 1000);
+        }
+
+        async function pollYahoo() {
+            const params = new URLSearchParams();
+            params.set('season', String(season));
+            if (requestedWeek) {
+                params.set('week', requestedWeek);
+            }
+
+            try {
+                const response = await fetch(
+                    '/api/yahoo/refresh-status?' + params.toString(),
+                    {
+                        credentials: 'same-origin',
+                        headers: { 'Accept': 'application/json' },
+                        cache: 'no-store'
+                    }
+                );
+
+                if (!response.ok) {
+                    throw new Error('Yahoo refresh status failed');
+                }
+
+                const payload = await response.json();
+                const nextVersion = String(payload.data_version || '');
+                const nextWeek = Number(payload.current_week || pageWeek);
+
+                refreshedAt = Number(payload.refreshed_at || refreshedAt);
+                refreshSeconds = Math.max(
+                    30,
+                    Number(payload.refresh_interval_seconds || refreshSeconds)
+                );
+                stale = Boolean(payload.stale);
+                renderStatus(payload.error || null);
+
+                const versionChanged = Boolean(
+                    dataVersion && nextVersion && nextVersion !== dataVersion
+                );
+                const autoWeekChanged = Boolean(
+                    !requestedWeek && nextWeek !== pageWeek
+                );
+
+                if (versionChanged || autoWeekChanged) {
+                    sessionStorage.setItem(
+                        'mamba-live-scroll-y',
+                        String(window.scrollY)
+                    );
+                    window.location.reload();
+                    return;
+                }
+
+                if (nextVersion) {
+                    dataVersion = nextVersion;
+                }
+            } catch (error) {
+                stale = true;
+                renderStatus('Yahoo refresh temporarily failed');
+                refreshSeconds = 60;
+            }
+
+            scheduleNext(refreshSeconds);
+        }
+
+        renderStatus(null);
+
+        window.setInterval(function () {
+            renderStatus(null);
+        }, 15000);
+
+        scheduleNext(refreshSeconds);
     })();
     </script>
 </body>

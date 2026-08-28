@@ -8,56 +8,22 @@
 
 {% macro table_nav(active) %}
 <nav class="section-jump-nav" aria-label="Jump to another table">
-    <a
-        class="section-jump-link {% if active == 'hybrid' %}is-active{% endif %}"
-        href="#hybrid-standings"
-    >
-        Hybrid
-    </a>
-
-    <a
-        class="section-jump-link {% if active == 'yahoo' %}is-active{% endif %}"
-        href="#yahoo-breakdown"
-    >
-        Yahoo W/L
-    </a>
-
-    <a
-        class="section-jump-link {% if active == 'points' %}is-active{% endif %}"
-        href="#points-breakdown"
-    >
-        Points For
-    </a>
-
-    <a
-        class="section-jump-link {% if active == 'mamba' %}is-active{% endif %}"
-        href="#mamba-breakdown"
-    >
-        Mamba Points
-    </a>
+    <a class="section-jump-link {% if active == 'hybrid' %}is-active{% endif %}" href="#hybrid-standings">Hybrid</a>
+    <a class="section-jump-link {% if active == 'yahoo' %}is-active{% endif %}" href="#yahoo-breakdown">Yahoo W/L</a>
+    <a class="section-jump-link {% if active == 'points' %}is-active{% endif %}" href="#points-breakdown">Points For</a>
+    <a class="section-jump-link {% if active == 'mamba' %}is-active{% endif %}" href="#mamba-breakdown">Mamba Points</a>
+    <a class="section-jump-link {% if active == 'matchups' %}is-active{% endif %}" href="#weekly-matchups">Matchups</a>
 </nav>
 {% endmacro %}
 
 {% macro rank_movement(change) %}
     {% if change is not none %}
         {% if change > 0 %}
-        <span
-            class="rank-movement rank-movement-up"
-            title="Up {{ change }} place{% if change != 1 %}s{% endif %} from the previous week"
-            aria-label="Up {{ change }} place{% if change != 1 %}s{% endif %} from the previous week"
-        >▲{{ change }}</span>
+        <span class="rank-movement rank-movement-up" title="Up {{ change }} place{% if change != 1 %}s{% endif %} from the previous week" aria-label="Up {{ change }} place{% if change != 1 %}s{% endif %} from the previous week">▲{{ change }}</span>
         {% elif change < 0 %}
-        <span
-            class="rank-movement rank-movement-down"
-            title="Down {{ 0 - change }} place{% if change != -1 %}s{% endif %} from the previous week"
-            aria-label="Down {{ 0 - change }} place{% if change != -1 %}s{% endif %} from the previous week"
-        >▼{{ 0 - change }}</span>
+        <span class="rank-movement rank-movement-down" title="Down {{ 0 - change }} place{% if change != -1 %}s{% endif %} from the previous week" aria-label="Down {{ 0 - change }} place{% if change != -1 %}s{% endif %} from the previous week">▼{{ 0 - change }}</span>
         {% else %}
-        <span
-            class="rank-movement rank-movement-flat"
-            title="No rank change from the previous week"
-            aria-label="No rank change from the previous week"
-        >—</span>
+        <span class="rank-movement rank-movement-flat" title="No rank change from the previous week" aria-label="No rank change from the previous week">—</span>
         {% endif %}
     {% endif %}
 {% endmacro %}
@@ -65,596 +31,58 @@
 <section class="hero">
     <div class="hero-glow hero-glow-purple"></div>
     <div class="hero-glow hero-glow-gold"></div>
-
     <div class="hero-content">
-        <div class="eyebrow">
-            <span class="eyebrow-dot"></span>
-            {{ season }} Season Dashboard
-        </div>
-
-        <h1>
-            Mamba Fantasy Football
-            <span>{{ season }}</span>
-        </h1>
-
-        <p class="hero-description">
-            Official Yahoo standings combined with the custom
-            Mamba scoring system.
-        </p>
-
+        <div class="eyebrow"><span class="eyebrow-dot"></span>{{ season }} Season Dashboard</div>
+        <h1>Mamba Fantasy Football <span>{{ season }}</span></h1>
+        <p class="hero-description">Official Yahoo standings combined with the custom Mamba scoring system.</p>
         <div class="hero-navigation">
             <div class="hero-nav-buttons">
-                <a
-                    class="dashboard-button dashboard-button-primary"
-                    href="#hybrid-standings"
-                >
-                    Hybrid
-                </a>
-
-                <a
-                    class="dashboard-button"
-                    href="#yahoo-breakdown"
-                >
-                    Yahoo W/L
-                </a>
-
-                <a
-                    class="dashboard-button"
-                    href="#points-breakdown"
-                >
-                    Points For
-                </a>
-
-                <a
-                    class="dashboard-button"
-                    href="#mamba-breakdown"
-                >
-                    Mamba Points
-                </a>
+                <a class="dashboard-button dashboard-button-primary" href="#hybrid-standings">Hybrid</a>
+                <a class="dashboard-button" href="#yahoo-breakdown">Yahoo W/L</a>
+                <a class="dashboard-button" href="#points-breakdown">Points For</a>
+                <a class="dashboard-button" href="#mamba-breakdown">Mamba Points</a>
+                <a class="dashboard-button" href="#weekly-matchups">Matchups</a>
             </div>
-
-            <span class="updated-label">
-                Through Week {{ current_week }}
-            </span>
+            <span class="updated-label">Through Week {{ current_week }}</span>
         </div>
     </div>
-
     <div class="hero-badge" aria-hidden="true">
         <div class="badge-ring">
-            <img
-                src="{{ url_for('static', path='images/mamba-logo-transparent.png') }}"
-                alt=""
-                class="hero-logo"
-                width="140"
-                height="140"
-                style="
-                    display: block;
-                    width: 140px;
-                    height: 140px;
-                    object-fit: contain;
-                "
-            >
+            <img src="{{ url_for('static', path='images/mamba-logo-transparent.png') }}" alt="" class="hero-logo" width="140" height="140" style="display:block;width:140px;height:140px;object-fit:contain;">
         </div>
     </div>
 </section>
 
-
-<!-- HYBRID STANDINGS -->
-
-<section
-    id="hybrid-standings"
-    class="dashboard-section"
->
-    <div class="section-heading">
-        <div>
-            <p class="section-kicker section-kicker-gold">
-                League Dashboard
-            </p>
-
-            <h2>
-                Hybrid Standings
-            </h2>
-
-            <p class="section-description">
-                Swipe or scroll sideways to view all values.
-                Rank, Team, and Hybrid remain frozen.
-            </p>
-
-            {{ table_nav("hybrid") }}
-        </div>
-
-        <div class="week-pill">
-            Week {{ current_week }}
-        </div>
-    </div>
-
-    <div class="standings-card table-card">
-        <div class="table-scroll">
-            <table class="data-table hybrid-table">
-                <thead>
-                    <tr>
-                        <th class="hybrid-rank-sticky">
-                            Rank
-                        </th>
-
-                        <th class="hybrid-team-sticky">
-                            Team
-                        </th>
-
-                        <th
-                            class="
-                                hybrid-value-sticky
-                                sticky-edge
-                            "
-                        >
-                            Hybrid
-                        </th>
-
-                        <th>Yahoo Rank</th>
-                        <th>Mamba Rank</th>
-                        <th>Total Mamba Points</th>
-                        <th>Total Points For</th>
-                    </tr>
-                </thead>
-
-                <tbody>
-                    {% for team in standings %}
-                    <tr
-                        {% if team.final_rank == 1 %}
-                            class="first-place-row"
-                        {% endif %}
-                    >
-                        <td class="hybrid-rank-sticky">
-                            <span class="rank-badge">
-                                {{ team.final_rank }}
-                            </span>
-                        </td>
-
-                        <td class="hybrid-team-sticky">
-                            <div class="team-cell-content">
-                                <div class="team-avatar">
-                                    {{ team.team_name[0] }}
-                                </div>
-
-                                <div class="team-information">
-                                    <div class="team-name-line">
-                                        <span class="team-name">
-                                            {{ team.team_name }}
-                                        </span>
-                                        {{ rank_movement(team.rank_change) }}
-                                    </div>
-
-                                    {% if team.final_rank == 1 %}
-                                    <span class="leader-label">
-                                        Hybrid Leader
-                                    </span>
-                                    {% endif %}
-                                </div>
-                            </div>
-                        </td>
-
-                        <td
-                            class="
-                                hybrid-value-sticky
-                                sticky-edge
-                                important-value
-                            "
-                        >
-                            {{ team.hybrid_rank | format_rank }}
-                        </td>
-
-                        <td>
-                            {{ team.yahoo_rank }}
-                        </td>
-
-                        <td>
-                            {{ team.mamba_rank }}
-                        </td>
-
-                        <td class="strong-value">
-                            {{ team.mamba_points | format_number }}
-                        </td>
-
-                        <td>
-                            {{ "%.2f" | format(team.points_for) }}
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-
-        <div class="scroll-hint">
-            Swipe horizontally to see more
-            <span aria-hidden="true">→</span>
-        </div>
-    </div>
+<section id="hybrid-standings" class="dashboard-section">
+    <div class="section-heading"><div><p class="section-kicker section-kicker-gold">League Dashboard</p><h2>Hybrid Standings</h2><p class="section-description">Swipe or scroll sideways to view all values. Rank, Team, and Hybrid remain frozen.</p>{{ table_nav("hybrid") }}</div><div class="week-pill">Week {{ current_week }}</div></div>
+    <div class="standings-card table-card"><div class="table-scroll"><table class="data-table hybrid-table">
+        <thead><tr><th class="hybrid-rank-sticky">Rank</th><th class="hybrid-team-sticky">Team</th><th class="hybrid-value-sticky sticky-edge">Hybrid</th><th>Yahoo Rank</th><th>Mamba Rank</th><th>Total Mamba Points</th><th>Total Points For</th></tr></thead>
+        <tbody>{% for team in standings %}<tr {% if team.final_rank == 1 %}class="first-place-row"{% endif %}><td class="hybrid-rank-sticky"><span class="rank-badge">{{ team.final_rank }}</span></td><td class="hybrid-team-sticky"><div class="team-cell-content"><div class="team-avatar">{{ team.team_name[0] }}</div><div class="team-information"><div class="team-name-line"><span class="team-name">{{ team.team_name }}</span>{{ rank_movement(team.rank_change) }}</div>{% if team.final_rank == 1 %}<span class="leader-label">Hybrid Leader</span>{% endif %}</div></div></td><td class="hybrid-value-sticky sticky-edge important-value">{{ team.hybrid_rank | format_rank }}</td><td>{{ team.yahoo_rank }}</td><td>{{ team.mamba_rank }}</td><td class="strong-value">{{ team.mamba_points | format_number }}</td><td>{{ "%.2f" | format(team.points_for) }}</td></tr>{% endfor %}</tbody>
+    </table></div><div class="scroll-hint">Swipe horizontally to see more <span aria-hidden="true">→</span></div></div>
 </section>
 
-
-<!-- YAHOO W/L AUDIT TABLE -->
-
-<section
-    id="yahoo-breakdown"
-    class="audit-section"
->
-    <div class="section-heading">
-        <div>
-            <p class="section-kicker">
-                Official Yahoo Results
-            </p>
-
-            <h2>
-                Weekly Wins and Losses
-            </h2>
-
-            <p class="section-description">
-                Ranked by Yahoo W-L-T results, with a tie worth half a win
-                and Total Points For used as the tiebreaker. Team and Record
-                remain frozen while the weekly results scroll.
-            </p>
-
-            {{ table_nav("yahoo") }}
-        </div>
-    </div>
-
-    <div class="standings-card table-card">
-        <div class="table-scroll">
-            <table class="data-table audit-table">
-                <thead>
-                    <tr>
-                        <th class="audit-team-sticky">
-                            Team
-                        </th>
-
-                        <th
-                            class="
-                                audit-total-sticky
-                                sticky-edge
-                                audit-total-heading
-                            "
-                        >
-                            <span>Yahoo</span>
-                            <span>Record</span>
-                        </th>
-
-                        {% for week_number in week_numbers %}
-                        <th>
-                            W{{ week_number }}
-                        </th>
-                        {% endfor %}
-                    </tr>
-                </thead>
-
-                <tbody>
-                    {% for team in yahoo_rows %}
-                    {% set wins = team.weekly_results | selectattr('is_win') | list | length %}
-                    {% set losses = team.weekly_results | selectattr('is_loss') | list | length %}
-                    {% set ties = team.weekly_results | selectattr('is_tie') | list | length %}
-                    <tr
-                        {% if team.rank == 1 %}
-                            class="audit-leader-row"
-                        {% endif %}
-                    >
-                        <td class="audit-team-sticky">
-                            <div class="team-cell-content">
-                                <span class="inline-rank">
-                                    {{ team.rank }}
-                                </span>
-
-                                <div class="team-avatar audit-avatar">
-                                    {{ team.team_name[0] }}
-                                </div>
-
-                                <div class="team-information">
-                                    <div class="team-name-line">
-                                        <span class="team-name">
-                                            {{ team.team_name }}
-                                        </span>
-                                        {{ rank_movement(team.rank_change) }}
-                                    </div>
-
-                                    {% if team.rank == 1 %}
-                                    <span class="leader-label">
-                                        Yahoo Leader
-                                    </span>
-                                    {% endif %}
-                                </div>
-                            </div>
-                        </td>
-
-                        <td
-                            class="
-                                audit-total-sticky
-                                sticky-edge
-                                audit-total-value
-                            "
-                            title="
-                                {{ wins }}-{{ losses }}-{{ ties }} record,
-                                {{ '%.2f' | format(team.total_points_for) }}
-                                Points For
-                            "
-                        >
-                            {{ wins }}-{{ losses }}-{{ ties }}
-                        </td>
-
-                        {% for weekly_result in team.weekly_results %}
-                        <td
-                            class="
-                                week-value
-                                {% if weekly_result.is_win %}
-                                    weekly-high
-                                {% elif weekly_result.is_loss %}
-                                    weekly-low
-                                {% endif %}
-                            "
-                        >
-                            {{ weekly_result.result }}
-                        </td>
-                        {% endfor %}
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-
-        <div class="scroll-hint">
-            Team and Yahoo record stay visible while you swipe
-            <span aria-hidden="true">→</span>
-        </div>
-    </div>
+<section id="yahoo-breakdown" class="audit-section">
+    <div class="section-heading"><div><p class="section-kicker">Official Yahoo Results</p><h2>Weekly Wins and Losses</h2><p class="section-description">Ranked by Yahoo W-L-T results, with a tie worth half a win and Total Points For used as the tiebreaker. Team and Record remain frozen while the weekly results scroll.</p>{{ table_nav("yahoo") }}</div></div>
+    <div class="standings-card table-card"><div class="table-scroll"><table class="data-table audit-table">
+        <thead><tr><th class="audit-team-sticky">Team</th><th class="audit-total-sticky sticky-edge audit-total-heading"><span>Yahoo</span><span>Record</span></th>{% for week_number in week_numbers %}<th>W{{ week_number }}</th>{% endfor %}</tr></thead>
+        <tbody>{% for team in yahoo_rows %}{% set wins = team.weekly_results | selectattr('is_win') | list | length %}{% set losses = team.weekly_results | selectattr('is_loss') | list | length %}{% set ties = team.weekly_results | selectattr('is_tie') | list | length %}<tr {% if team.rank == 1 %}class="audit-leader-row"{% endif %}><td class="audit-team-sticky"><div class="team-cell-content"><span class="inline-rank">{{ team.rank }}</span><div class="team-avatar audit-avatar">{{ team.team_name[0] }}</div><div class="team-information"><div class="team-name-line"><span class="team-name">{{ team.team_name }}</span>{{ rank_movement(team.rank_change) }}</div>{% if team.rank == 1 %}<span class="leader-label">Yahoo Leader</span>{% endif %}</div></div></td><td class="audit-total-sticky sticky-edge audit-total-value" title="{{ wins }}-{{ losses }}-{{ ties }} record, {{ '%.2f' | format(team.total_points_for) }} Points For">{{ wins }}-{{ losses }}-{{ ties }}</td>{% for weekly_result in team.weekly_results %}<td class="week-value {% if weekly_result.is_win %}weekly-high{% elif weekly_result.is_loss %}weekly-low{% endif %}">{{ weekly_result.result }}</td>{% endfor %}</tr>{% endfor %}</tbody>
+    </table></div><div class="scroll-hint">Team and Yahoo record stay visible while you swipe <span aria-hidden="true">→</span></div></div>
 </section>
 
-
-<!-- POINTS FOR AUDIT TABLE -->
-
-<section
-    id="points-breakdown"
-    class="audit-section"
->
-    <div class="section-heading">
-        <div>
-            <p class="section-kicker">
-                Weekly Audit
-            </p>
-
-            <h2>
-                Points For Breakdown
-            </h2>
-
-            <p class="section-description">
-                Ranked by Total Points For. Team and Total Points For
-                remain frozen while the weekly scores scroll.
-                Weekly highs are green and weekly lows are red.
-            </p>
-
-            {{ table_nav("points") }}
-        </div>
-    </div>
-
-    <div class="standings-card table-card">
-        <div class="table-scroll">
-            <table class="data-table audit-table">
-                <thead>
-                    <tr>
-                        <th class="audit-team-sticky">
-                            Team
-                        </th>
-
-                        <th
-                            class="
-                                audit-total-sticky
-                                sticky-edge
-                                audit-total-heading
-                            "
-                        >
-                            <span>Total Points</span>
-                            <span>For</span>
-                        </th>
-
-                        {% for week_number in week_numbers %}
-                        <th>
-                            W{{ week_number }}
-                        </th>
-                        {% endfor %}
-                    </tr>
-                </thead>
-
-                <tbody>
-                    {% for team in points_for_rows %}
-                    <tr
-                        {% if team.rank == 1 %}
-                            class="audit-leader-row"
-                        {% endif %}
-                    >
-                        <td class="audit-team-sticky">
-                            <div class="team-cell-content">
-                                <span class="inline-rank">
-                                    {{ team.rank }}
-                                </span>
-
-                                <div class="team-avatar audit-avatar">
-                                    {{ team.team_name[0] }}
-                                </div>
-
-                                <div class="team-information">
-                                    <div class="team-name-line">
-                                        <span class="team-name">
-                                            {{ team.team_name }}
-                                        </span>
-                                        {{ rank_movement(team.rank_change) }}
-                                    </div>
-
-                                    {% if team.rank == 1 %}
-                                    <span class="leader-label">
-                                        Points Leader
-                                    </span>
-                                    {% endif %}
-                                </div>
-                            </div>
-                        </td>
-
-                        <td
-                            class="
-                                audit-total-sticky
-                                sticky-edge
-                                audit-total-value
-                            "
-                        >
-                            {{ "%.2f" | format(team.total) }}
-                        </td>
-
-                        {% for weekly_value in team.weekly_values %}
-                        <td
-                            class="
-                                week-value
-                                {% if weekly_value.is_high %}
-                                    weekly-high
-                                {% elif weekly_value.is_low %}
-                                    weekly-low
-                                {% endif %}
-                            "
-                        >
-                            {{ "%.2f" | format(weekly_value.value) }}
-                        </td>
-                        {% endfor %}
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-
-        <div class="scroll-hint">
-            Team and total stay visible while you swipe
-            <span aria-hidden="true">→</span>
-        </div>
-    </div>
+<section id="points-breakdown" class="audit-section">
+    <div class="section-heading"><div><p class="section-kicker">Weekly Audit</p><h2>Points For Breakdown</h2><p class="section-description">Ranked by Total Points For. Team and Total Points For remain frozen while the weekly scores scroll. Weekly highs are green and weekly lows are red.</p>{{ table_nav("points") }}</div></div>
+    <div class="standings-card table-card"><div class="table-scroll"><table class="data-table audit-table">
+        <thead><tr><th class="audit-team-sticky">Team</th><th class="audit-total-sticky sticky-edge audit-total-heading"><span>Total Points</span><span>For</span></th>{% for week_number in week_numbers %}<th>W{{ week_number }}</th>{% endfor %}</tr></thead>
+        <tbody>{% for team in points_for_rows %}<tr {% if team.rank == 1 %}class="audit-leader-row"{% endif %}><td class="audit-team-sticky"><div class="team-cell-content"><span class="inline-rank">{{ team.rank }}</span><div class="team-avatar audit-avatar">{{ team.team_name[0] }}</div><div class="team-information"><div class="team-name-line"><span class="team-name">{{ team.team_name }}</span>{{ rank_movement(team.rank_change) }}</div>{% if team.rank == 1 %}<span class="leader-label">Points Leader</span>{% endif %}</div></div></td><td class="audit-total-sticky sticky-edge audit-total-value">{{ "%.2f" | format(team.total) }}</td>{% for weekly_value in team.weekly_values %}<td class="week-value {% if weekly_value.is_high %}weekly-high{% elif weekly_value.is_low %}weekly-low{% endif %}">{{ "%.2f" | format(weekly_value.value) }}</td>{% endfor %}</tr>{% endfor %}</tbody>
+    </table></div><div class="scroll-hint">Team and total stay visible while you swipe <span aria-hidden="true">→</span></div></div>
 </section>
 
-
-<!-- MAMBA POINTS AUDIT TABLE -->
-
-<section
-    id="mamba-breakdown"
-    class="audit-section"
->
-    <div class="section-heading">
-        <div>
-            <p class="section-kicker">
-                Weekly Audit
-            </p>
-
-            <h2>
-                Mamba Points Breakdown
-            </h2>
-
-            <p class="section-description">
-                Ranked by Total Mamba Points. Team and Total Mamba
-                Points remain frozen while the weekly awards scroll.
-                Weekly highs are green and weekly lows are red.
-            </p>
-
-            {{ table_nav("mamba") }}
-        </div>
-    </div>
-
-    <div class="standings-card table-card">
-        <div class="table-scroll">
-            <table class="data-table audit-table">
-                <thead>
-                    <tr>
-                        <th class="audit-team-sticky">
-                            Team
-                        </th>
-
-                        <th
-                            class="
-                                audit-total-sticky
-                                sticky-edge
-                                audit-total-heading
-                            "
-                        >
-                            <span>Total Mamba</span>
-                            <span>Points</span>
-                        </th>
-
-                        {% for week_number in week_numbers %}
-                        <th>
-                            W{{ week_number }}
-                        </th>
-                        {% endfor %}
-                    </tr>
-                </thead>
-
-                <tbody>
-                    {% for team in mamba_rows %}
-                    <tr
-                        {% if team.rank == 1 %}
-                            class="audit-leader-row"
-                        {% endif %}
-                    >
-                        <td class="audit-team-sticky">
-                            <div class="team-cell-content">
-                                <span class="inline-rank">
-                                    {{ team.rank }}
-                                </span>
-
-                                <div class="team-avatar audit-avatar">
-                                    {{ team.team_name[0] }}
-                                </div>
-
-                                <div class="team-information">
-                                    <div class="team-name-line">
-                                        <span class="team-name">
-                                            {{ team.team_name }}
-                                        </span>
-                                        {{ rank_movement(team.rank_change) }}
-                                    </div>
-
-                                    {% if team.rank == 1 %}
-                                    <span class="leader-label">
-                                        Mamba Leader
-                                    </span>
-                                    {% endif %}
-                                </div>
-                            </div>
-                        </td>
-
-                        <td
-                            class="
-                                audit-total-sticky
-                                sticky-edge
-                                audit-total-value
-                            "
-                        >
-                            {{ team.total | format_number }}
-                        </td>
-
-                        {% for weekly_value in team.weekly_values %}
-                        <td
-                            class="
-                                week-value
-                                {% if weekly_value.is_high %}
-                                    weekly-high
-                                {% elif weekly_value.is_low %}
-                                    weekly-low
-                                {% endif %}
-                            "
-                        >
-                            {{ weekly_value.value | format_number }}
-                        </td>
-                        {% endfor %}
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-
-        <div class="scroll-hint">
-            Team and total stay visible while you swipe
-            <span aria-hidden="true">→</span>
-        </div>
-    </div>
+<section id="mamba-breakdown" class="audit-section">
+    <div class="section-heading"><div><p class="section-kicker">Weekly Audit</p><h2>Mamba Points Breakdown</h2><p class="section-description">Ranked by Total Mamba Points. Team and Total Mamba Points remain frozen while the weekly awards scroll. Weekly highs are green and weekly lows are red.</p>{{ table_nav("mamba") }}</div></div>
+    <div class="standings-card table-card"><div class="table-scroll"><table class="data-table audit-table">
+        <thead><tr><th class="audit-team-sticky">Team</th><th class="audit-total-sticky sticky-edge audit-total-heading"><span>Total Mamba</span><span>Points</span></th>{% for week_number in week_numbers %}<th>W{{ week_number }}</th>{% endfor %}</tr></thead>
+        <tbody>{% for team in mamba_rows %}<tr {% if team.rank == 1 %}class="audit-leader-row"{% endif %}><td class="audit-team-sticky"><div class="team-cell-content"><span class="inline-rank">{{ team.rank }}</span><div class="team-avatar audit-avatar">{{ team.team_name[0] }}</div><div class="team-information"><div class="team-name-line"><span class="team-name">{{ team.team_name }}</span>{{ rank_movement(team.rank_change) }}</div>{% if team.rank == 1 %}<span class="leader-label">Mamba Leader</span>{% endif %}</div></div></td><td class="audit-total-sticky sticky-edge audit-total-value">{{ team.total | format_number }}</td>{% for weekly_value in team.weekly_values %}<td class="week-value {% if weekly_value.is_high %}weekly-high{% elif weekly_value.is_low %}weekly-low{% endif %}">{{ weekly_value.value | format_number }}</td>{% endfor %}</tr>{% endfor %}</tbody>
+    </table></div><div class="scroll-hint">Team and total stay visible while you swipe <span aria-hidden="true">→</span></div></div>
 </section>
 
 {% endblock %}

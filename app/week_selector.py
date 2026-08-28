@@ -163,11 +163,22 @@ def build_period_selector(selected_week: int, selected_season: int) -> str:
             const selectedSeason = {selected_season};
             const seasonDefaultWeeks = {{{default_week_map}}};
             const standardDefaultWeek = {DEFAULT_MAMBA_WEEK};
+            let latestSeason = selectedSeason;
 
             if (!form || !seasonSelect || !weekSelect) return;
 
             seasonSelect.addEventListener('change', function () {{
                 const season = Number(this.value);
+
+                // The newest season should always open at Yahoo's latest week
+                // with actual data. Omitting the week lets the server resolve
+                // that automatically (Week 1 before the season begins).
+                if (season === latestSeason) {{
+                    weekSelect.disabled = true;
+                    form.submit();
+                    return;
+                }}
+
                 const defaultWeek = seasonDefaultWeeks[season] || standardDefaultWeek;
                 weekSelect.value = String(defaultWeek);
                 form.submit();
@@ -195,6 +206,7 @@ def build_period_selector(selected_week: int, selected_season: int) -> str:
                 }}
 
                 seasons.sort(function (a, b) {{ return b - a; }});
+                latestSeason = seasons.length ? seasons[0] : selectedSeason;
                 seasonSelect.innerHTML = '';
 
                 seasons.forEach(function (season) {{
@@ -257,9 +269,8 @@ class HistoricalWeekSelectorMiddleware(BaseHTTPMiddleware):
             except (TypeError, ValueError):
                 selected_season = DEFAULT_SEASON
         else:
-            # The root URL now resolves the newest Yahoo season server-side.
-            # Read the rendered header so the selector reflects that resolved
-            # season instead of incorrectly falling back to 2025.
+            # The root URL resolves the newest Yahoo season server-side. Read
+            # the rendered header so the selector mirrors that resolved season.
             season_match = re.search(
                 r'<span class="season-label">\s*(\d{4})\s+Season\s*</span>',
                 html,

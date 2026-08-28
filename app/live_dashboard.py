@@ -9,11 +9,9 @@ from app.routes import (
     build_mamba_audit_rows,
     build_points_for_audit_rows,
     build_yahoo_snapshot,
-    home as historical_2025_home,
     templates,
 )
 from app.scoring import build_hybrid_standings
-from app.yahoo_dashboard import MAMBA_SCORING_END_WEEK
 from app.yahoo_live_cache import load_cached_yahoo_dashboard_data
 from app.yahoo_seasons import discover_mamba_seasons
 
@@ -23,16 +21,12 @@ live_dashboard_router = APIRouter()
 
 def _latest_available_season(request: Request) -> int:
     """Resolve the newest season, with a safe current-year outage fallback."""
-
     try:
         seasons = discover_mamba_seasons(request)
         if seasons:
             return max(int(item["season"]) for item in seasons)
     except Exception as exc:
-        # If Yahoo's league-history endpoint is temporarily unavailable, the
-        # current-year dashboard cache can still serve the last known good data.
         print(f"WARNING: Yahoo season discovery failed; using current year: {exc}")
-
     return max(2025, datetime.now(timezone.utc).year)
 
 
@@ -42,24 +36,8 @@ def live_dashboard_home(
     season: Optional[int] = Query(default=None, ge=2000, le=2100),
     week: Optional[int] = Query(default=None, ge=1, le=18),
 ):
-    """Render every Mamba League season in the established dashboard layout.
-
-    With no query parameters, Mamba opens the newest available Yahoo season at
-    that season's current/latest week. Before 2026 games begin Yahoo reports
-    current Week 1, so the default is 2026 Week 1. The validated 2025 JSON test
-    remains the source for Weeks 1-13 of 2025 as our regression baseline.
-
-    Mamba/Hybrid scoring runs through Week 13 for all seasons except 2024,
-    which runs through Week 14; later weeks show Yahoo matchups only.
-    """
-
+    """Render Mamba League seasons using Yahoo as the shared source of truth."""
     selected_season = season if season is not None else _latest_available_season(request)
-
-    if (
-        selected_season == 2025
-        and (week is None or week <= MAMBA_SCORING_END_WEEK)
-    ):
-        return historical_2025_home(request=request, week=week)
 
     data = load_cached_yahoo_dashboard_data(
         request=request,
@@ -87,8 +65,6 @@ def live_dashboard_home(
         ),
         "yahoo_refresh_stale": bool(refresh_meta.get("stale")),
         "yahoo_refresh_error": refresh_meta.get("error"),
-        # Auto-poll only the current season's default/latest view. Manually
-        # selected old weeks remain stable and refresh only when the user asks.
         "live_refresh_enabled": (
             selected_season == current_calendar_season and week is None
         ),
@@ -98,10 +74,7 @@ def live_dashboard_home(
     if data["mode"] == "matchups":
         return templates.TemplateResponse(
             "matchups.html",
-            {
-                **common_context,
-                "matchups": data.get("matchups", []),
-            },
+            {**common_context, "matchups": data.get("matchups", [])},
         )
 
     week_numbers = data["week_numbers"]
@@ -114,18 +87,10 @@ def live_dashboard_home(
         weeks=weeks,
         week_numbers=week_numbers,
     )
-
-    standings = build_hybrid_standings(
-        weeks=weeks,
-        yahoo_ranks=yahoo_ranks,
-    )
-
+    standings = build_hybrid_standings(weeks=weeks, yahoo_ranks=yahoo_ranks)
     points_for_rows = build_points_for_audit_rows(
-        weeks=weeks,
-        week_numbers=week_numbers,
-        standings=standings,
+        weeks=weeks, week_numbers=week_numbers, standings=standings
     )
-
     mamba_rows = build_mamba_audit_rows(
         weekly_mamba_points=weekly_mamba_points,
         week_numbers=week_numbers,
@@ -152,5 +117,6 @@ def live_dashboard_home(
             "yahoo_rows": yahoo_rows,
             "points_for_rows": points_for_rows,
             "mamba_rows": mamba_rows,
+            "matchups": data.get("matchups", []),
         },
     )

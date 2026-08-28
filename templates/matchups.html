@@ -5,6 +5,7 @@
 {% endblock %}
 
 {% block content %}
+{% set cutoff_week = 14 if season >= 2020 and season <= 2024 else 13 %}
 <section class="hero">
     <div class="hero-glow hero-glow-purple"></div>
     <div class="hero-glow hero-glow-gold"></div>
@@ -21,7 +22,7 @@
         </h1>
 
         <p class="hero-description">
-            Mamba and Hybrid scoring stop after Week 13.
+            Mamba and Hybrid scoring stop after Week {{ cutoff_week }}.
             Yahoo matchups remain available for the rest of the season.
         </p>
 
@@ -58,7 +59,7 @@
             <p class="section-kicker section-kicker-gold">Official Yahoo Results</p>
             <h2>Week {{ current_week }} Matchups</h2>
             <p class="section-description">
-                Weeks 14 and later are shown for Yahoo matchup tracking only.
+                Weeks {{ cutoff_week + 1 }} and later are shown for Yahoo matchup tracking only.
                 They do not add Mamba Points or affect Hybrid standings.
             </p>
         </div>

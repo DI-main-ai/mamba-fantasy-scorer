@@ -42,10 +42,14 @@
                     <h2>Week {{ current_week }} Head-to-Head Matchups</h2>
                     <p class="section-description">The official Yahoo head-to-head scores for the selected week.</p>
                     <nav class="section-jump-nav" aria-label="Jump to another section">
+                        {% if hybrid_scoring_enabled %}
                         <a class="section-jump-link" href="#hybrid-standings">Hybrid</a>
                         <a class="section-jump-link" href="#yahoo-breakdown">Yahoo W/L</a>
                         <a class="section-jump-link" href="#points-breakdown">Points For</a>
                         <a class="section-jump-link" href="#mamba-breakdown">Mamba Points</a>
+                        {% else %}
+                        <a class="section-jump-link" href="#yahoo-breakdown">Yahoo Standings</a>
+                        {% endif %}
                         <a class="section-jump-link is-active" href="#weekly-matchups">Matchups</a>
                     </nav>
                 </div>

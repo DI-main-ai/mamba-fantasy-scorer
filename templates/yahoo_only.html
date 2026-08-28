@@ -1,0 +1,111 @@
+{% extends "base.html" %}
+
+{% block title %}
+    Mamba Fantasy
+{% endblock %}
+
+{% block content %}
+
+{% macro yahoo_nav(active) %}
+<nav class="section-jump-nav" aria-label="Jump to another section">
+    <a class="section-jump-link {% if active == 'yahoo' %}is-active{% endif %}" href="#yahoo-breakdown">Yahoo Standings</a>
+    <a class="section-jump-link {% if active == 'matchups' %}is-active{% endif %}" href="#weekly-matchups">Matchups</a>
+</nav>
+{% endmacro %}
+
+{% macro rank_movement(change) %}
+    {% if change is not none %}
+        {% if change > 0 %}
+        <span class="rank-movement rank-movement-up" title="Up {{ change }} place{% if change != 1 %}s{% endif %} from the previous week" aria-label="Up {{ change }} place{% if change != 1 %}s{% endif %} from the previous week">▲{{ change }}</span>
+        {% elif change < 0 %}
+        <span class="rank-movement rank-movement-down" title="Down {{ 0 - change }} place{% if change != -1 %}s{% endif %} from the previous week" aria-label="Down {{ 0 - change }} place{% if change != -1 %}s{% endif %} from the previous week">▼{{ 0 - change }}</span>
+        {% else %}
+        <span class="rank-movement rank-movement-flat" title="No rank change from the previous week" aria-label="No rank change from the previous week">—</span>
+        {% endif %}
+    {% endif %}
+{% endmacro %}
+
+<section class="hero">
+    <div class="hero-glow hero-glow-purple"></div>
+    <div class="hero-glow hero-glow-gold"></div>
+    <div class="hero-content">
+        <div class="eyebrow"><span class="eyebrow-dot"></span>{{ season }} Season History</div>
+        <h1>Mamba Fantasy Football <span>{{ season }}</span></h1>
+        <p class="hero-description">
+            Official Yahoo standings and head-to-head matchup history.
+            Hybrid and Mamba scoring begin with the 2020 season.
+        </p>
+        <div class="hero-navigation">
+            <div class="hero-nav-buttons">
+                <a class="dashboard-button dashboard-button-primary" href="#yahoo-breakdown">Yahoo Standings</a>
+                <a class="dashboard-button" href="#weekly-matchups">Matchups</a>
+            </div>
+            <span class="updated-label">Through Week {{ current_week }}</span>
+        </div>
+    </div>
+    <div class="hero-badge" aria-hidden="true">
+        <div class="badge-ring">
+            <img src="{{ url_for('static', path='images/mamba-logo-transparent.png') }}" alt="" class="hero-logo" width="140" height="140" style="display:block;width:140px;height:140px;object-fit:contain;">
+        </div>
+    </div>
+</section>
+
+<section id="yahoo-breakdown" class="dashboard-section">
+    <div class="section-heading">
+        <div>
+            <p class="section-kicker section-kicker-gold">Official Yahoo Results</p>
+            <h2>Yahoo Standings</h2>
+            <p class="section-description">
+                Standings through Week {{ current_week }} based on Yahoo W-L-T results.
+                Ties count as half a win and Total Points For is used as the tiebreaker.
+            </p>
+            {{ yahoo_nav("yahoo") }}
+        </div>
+        <div class="week-pill">Week {{ current_week }}</div>
+    </div>
+
+    <div class="standings-card table-card">
+        <div class="table-scroll">
+            <table class="data-table audit-table">
+                <thead>
+                    <tr>
+                        <th class="audit-team-sticky">Team</th>
+                        <th class="audit-total-sticky sticky-edge audit-total-heading"><span>Yahoo</span><span>Record</span></th>
+                        <th>Total Points For</th>
+                        {% for week_number in week_numbers %}<th>W{{ week_number }}</th>{% endfor %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for team in yahoo_rows %}
+                    {% set wins = team.weekly_results | selectattr('is_win') | list | length %}
+                    {% set losses = team.weekly_results | selectattr('is_loss') | list | length %}
+                    {% set ties = team.weekly_results | selectattr('is_tie') | list | length %}
+                    <tr {% if team.rank == 1 %}class="audit-leader-row"{% endif %}>
+                        <td class="audit-team-sticky">
+                            <div class="team-cell-content">
+                                <span class="inline-rank">{{ team.rank }}</span>
+                                <div class="team-avatar audit-avatar">{{ team.team_name[0] }}</div>
+                                <div class="team-information">
+                                    <div class="team-name-line">
+                                        <span class="team-name">{{ team.team_name }}</span>
+                                        {{ rank_movement(team.rank_change) }}
+                                    </div>
+                                    {% if team.rank == 1 %}<span class="leader-label">Yahoo Leader</span>{% endif %}
+                                </div>
+                            </div>
+                        </td>
+                        <td class="audit-total-sticky sticky-edge audit-total-value">{{ wins }}-{{ losses }}-{{ ties }}</td>
+                        <td class="strong-value">{{ "%.2f" | format(team.total_points_for) }}</td>
+                        {% for weekly_result in team.weekly_results %}
+                        <td class="week-value {% if weekly_result.is_win %}weekly-high{% elif weekly_result.is_loss %}weekly-low{% endif %}">{{ weekly_result.result }}</td>
+                        {% endfor %}
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <div class="scroll-hint">Team and Yahoo record stay visible while you swipe <span aria-hidden="true">→</span></div>
+    </div>
+</section>
+
+{% endblock %}

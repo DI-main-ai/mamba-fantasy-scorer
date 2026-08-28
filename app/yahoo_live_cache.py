@@ -10,8 +10,8 @@ from app.yahoo_dashboard import load_yahoo_dashboard_data
 from app.yahoo_shared_auth import _upstash_command, _upstash_config
 
 
-CACHE_PREFIX = "mamba:yahoo:dashboard:v1"
-LOCK_PREFIX = "mamba:yahoo:dashboard-lock:v1"
+CACHE_PREFIX = "mamba:yahoo:dashboard:v2"
+LOCK_PREFIX = "mamba:yahoo:dashboard-lock:v2"
 LIVE_REFRESH_SECONDS = 45
 IDLE_REFRESH_SECONDS = 300
 HISTORICAL_REFRESH_SECONDS = 3600
@@ -53,7 +53,7 @@ def _current_week_state(data: Dict[str, Any]) -> str:
 
     current_week = str(data.get("current_week") or "")
 
-    if data.get("mode") == "dashboard":
+    if data.get("mode") in {"dashboard", "yahoo_only"}:
         scores = data.get("weeks", {}).get(current_week, {})
         has_nonzero_score = any(
             abs(float(value)) > 0.000001

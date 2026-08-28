@@ -289,9 +289,9 @@
             </h2>
 
             <p class="section-description">
-                Ranked by Total Wins, with Total Points For used
-                as the tiebreaker. Team and Total Wins remain
-                frozen while the weekly results scroll.
+                Ranked by Yahoo W-L-T results, with a tie worth half a win
+                and Total Points For used as the tiebreaker. Team and Record
+                remain frozen while the weekly results scroll.
             </p>
 
             {{ table_nav("yahoo") }}
@@ -314,8 +314,8 @@
                                 audit-total-heading
                             "
                         >
-                            <span>Total</span>
-                            <span>Wins</span>
+                            <span>Yahoo</span>
+                            <span>Record</span>
                         </th>
 
                         {% for week_number in week_numbers %}
@@ -328,6 +328,9 @@
 
                 <tbody>
                     {% for team in yahoo_rows %}
+                    {% set wins = team.weekly_results | selectattr('is_win') | list | length %}
+                    {% set losses = team.weekly_results | selectattr('is_loss') | list | length %}
+                    {% set ties = team.weekly_results | selectattr('is_tie') | list | length %}
                     <tr
                         {% if team.rank == 1 %}
                             class="audit-leader-row"
@@ -367,12 +370,12 @@
                                 audit-total-value
                             "
                             title="
-                                {{ team.total_wins }} wins,
+                                {{ wins }}-{{ losses }}-{{ ties }} record,
                                 {{ '%.2f' | format(team.total_points_for) }}
                                 Points For
                             "
                         >
-                            {{ team.total_wins }}
+                            {{ wins }}-{{ losses }}-{{ ties }}
                         </td>
 
                         {% for weekly_result in team.weekly_results %}
@@ -396,7 +399,7 @@
         </div>
 
         <div class="scroll-hint">
-            Team and total wins stay visible while you swipe
+            Team and Yahoo record stay visible while you swipe
             <span aria-hidden="true">→</span>
         </div>
     </div>

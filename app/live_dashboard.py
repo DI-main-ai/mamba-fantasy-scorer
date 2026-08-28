@@ -20,7 +20,6 @@ live_dashboard_router = APIRouter()
 
 
 def _latest_available_season(request: Request) -> int:
-    """Resolve the newest season, with a safe current-year outage fallback."""
     try:
         seasons = discover_mamba_seasons(request)
         if seasons:
@@ -36,18 +35,13 @@ def live_dashboard_home(
     season: Optional[int] = Query(default=None, ge=2000, le=2100),
     week: Optional[int] = Query(default=None, ge=1, le=18),
 ):
-    """Render Mamba League seasons using Yahoo as the shared source of truth."""
     selected_season = season if season is not None else _latest_available_season(request)
-
     data = load_cached_yahoo_dashboard_data(
-        request=request,
-        season=selected_season,
-        requested_week=week,
+        request=request, season=selected_season, requested_week=week
     )
 
     refresh_meta = data.get("_refresh_meta", {})
     current_calendar_season = datetime.now(timezone.utc).year
-
     common_context = {
         "request": request,
         "page_title": "Mamba Fantasy",
@@ -60,14 +54,10 @@ def live_dashboard_home(
         "league_key": data.get("league_key"),
         "yahoo_refresh_epoch": float(refresh_meta.get("refreshed_at") or 0),
         "yahoo_data_version": str(refresh_meta.get("signature") or ""),
-        "yahoo_refresh_interval_seconds": int(
-            refresh_meta.get("refresh_interval_seconds") or 300
-        ),
+        "yahoo_refresh_interval_seconds": int(refresh_meta.get("refresh_interval_seconds") or 300),
         "yahoo_refresh_stale": bool(refresh_meta.get("stale")),
         "yahoo_refresh_error": refresh_meta.get("error"),
-        "live_refresh_enabled": (
-            selected_season == current_calendar_season and week is None
-        ),
+        "live_refresh_enabled": selected_season == current_calendar_season and week is None,
         "live_refresh_requested_week": week,
     }
 
@@ -83,9 +73,7 @@ def live_dashboard_home(
     yahoo_teams = data["yahoo_teams"]
 
     yahoo_rows, yahoo_ranks = build_yahoo_snapshot(
-        yahoo_teams=yahoo_teams,
-        weeks=weeks,
-        week_numbers=week_numbers,
+        yahoo_teams=yahoo_teams, weeks=weeks, week_numbers=week_numbers
     )
     standings = build_hybrid_standings(weeks=weeks, yahoo_ranks=yahoo_ranks)
     points_for_rows = build_points_for_audit_rows(
@@ -118,5 +106,6 @@ def live_dashboard_home(
             "points_for_rows": points_for_rows,
             "mamba_rows": mamba_rows,
             "matchups": data.get("matchups", []),
+            "show_bottom_matchups": True,
         },
     )

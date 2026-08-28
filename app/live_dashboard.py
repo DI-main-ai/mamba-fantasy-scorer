@@ -79,7 +79,11 @@ def live_dashboard_home(
         ),
         "yahoo_refresh_stale": bool(refresh_meta.get("stale")),
         "yahoo_refresh_error": refresh_meta.get("error"),
-        "live_refresh_enabled": selected_season == current_calendar_season,
+        # Auto-poll only the current season's default/latest view. Manually
+        # selected old weeks remain stable and refresh only when the user asks.
+        "live_refresh_enabled": (
+            selected_season == current_calendar_season and week is None
+        ),
         "live_refresh_requested_week": week,
     }
 

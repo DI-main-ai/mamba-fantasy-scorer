@@ -12,7 +12,7 @@ from app.routes import (
     templates,
 )
 from app.scoring import build_hybrid_standings
-from app.yahoo_dashboard import HYBRID_START_SEASON
+from app.yahoo_dashboard import HYBRID_START_SEASON, mamba_scoring_end_week
 from app.yahoo_live_cache import load_cached_yahoo_dashboard_data
 from app.yahoo_seasons import discover_mamba_seasons
 
@@ -79,6 +79,14 @@ def live_dashboard_home(
     refresh_meta = data.get("_refresh_meta", {})
     current_calendar_season = datetime.now(timezone.utc).year
     hybrid_scoring_enabled = selected_season >= HYBRID_START_SEASON
+    standings_end_week = int(
+        data.get("standings_end_week")
+        or (
+            mamba_scoring_end_week(selected_season)
+            if hybrid_scoring_enabled
+            else 13
+        )
+    )
 
     common_context = {
         "request": request,
@@ -102,6 +110,7 @@ def live_dashboard_home(
         ),
         "live_refresh_requested_week": week,
         "hybrid_scoring_enabled": hybrid_scoring_enabled,
+        "standings_end_week": standings_end_week,
     }
 
     if data["mode"] == "matchups":

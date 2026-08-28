@@ -1,5 +1,5 @@
 import re
-from typing import Optional
+from typing import Iterable, Optional
 
 from fastapi import Request
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -8,10 +8,6 @@ from starlette.responses import Response
 
 DEFAULT_SEASON = 2025
 MAXIMUM_WEEK = 18
-DEFAULT_MAMBA_WEEK = 13
-SEASON_DEFAULT_WEEKS = {
-    2024: 14,
-}
 
 PERIOD_SELECTOR_STYLES = """
 <style>
@@ -99,18 +95,36 @@ PERIOD_SELECTOR_STYLES = """
 """
 
 
-def build_period_selector(selected_week: int, selected_season: int) -> str:
+def _clean_available_weeks(
+    available_weeks: Iterable[int],
+    selected_week: int,
+) -> list[int]:
+    cleaned = sorted(
+        {
+            int(week_number)
+            for week_number in available_weeks
+            if 1 <= int(week_number) <= MAXIMUM_WEEK
+        }
+    )
+    if selected_week not in cleaned:
+        cleaned.append(selected_week)
+        cleaned.sort()
+    return cleaned or [selected_week]
+
+
+def build_period_selector(
+    selected_week: int,
+    selected_season: int,
+    available_weeks: Iterable[int],
+) -> str:
+    clean_weeks = _clean_available_weeks(available_weeks, selected_week)
     week_options = "".join(
         (
             f'<option value="{week_number}" '
             f'{"selected" if week_number == selected_week else ""}>'
             f'Week {week_number}</option>'
         )
-        for week_number in range(1, MAXIMUM_WEEK + 1)
-    )
-
-    default_week_map = ", ".join(
-        f"{season}: {week}" for season, week in SEASON_DEFAULT_WEEKS.items()
+        for week_number in clean_weeks
     )
 
     return f"""
@@ -161,26 +175,13 @@ def build_period_selector(selected_week: int, selected_season: int) -> str:
             const weekSelect = document.getElementById('period-week-select');
             const seasonNote = document.getElementById('period-season-note');
             const selectedSeason = {selected_season};
-            const seasonDefaultWeeks = {{{default_week_map}}};
-            const standardDefaultWeek = {DEFAULT_MAMBA_WEEK};
-            let latestSeason = selectedSeason;
 
             if (!form || !seasonSelect || !weekSelect) return;
 
             seasonSelect.addEventListener('change', function () {{
-                const season = Number(this.value);
-
-                // The newest season should always open at Yahoo's latest week
-                // with actual data. Omitting the week lets the server resolve
-                // that automatically (Week 1 before the season begins).
-                if (season === latestSeason) {{
-                    weekSelect.disabled = true;
-                    form.submit();
-                    return;
-                }}
-
-                const defaultWeek = seasonDefaultWeeks[season] || standardDefaultWeek;
-                weekSelect.value = String(defaultWeek);
+                // Submit only the season. The server chooses that season's
+                // correct landing week and returns only weeks with Yahoo data.
+                weekSelect.disabled = true;
                 form.submit();
             }});
 
@@ -206,7 +207,6 @@ def build_period_selector(selected_week: int, selected_season: int) -> str:
                 }}
 
                 seasons.sort(function (a, b) {{ return b - a; }});
-                latestSeason = seasons.length ? seasons[0] : selectedSeason;
                 seasonSelect.innerHTML = '';
 
                 seasons.forEach(function (season) {{
@@ -281,7 +281,39 @@ class HistoricalWeekSelectorMiddleware(BaseHTTPMiddleware):
                 else DEFAULT_SEASON
             )
 
-        selector = build_period_selector(selected_week, selected_season)
+        week_param = request.query_params.get("week")
+        requested_week: Optional[int] = None
+        if week_param is not None:
+            try:
+                requested_week = int(week_param)
+            except (TypeError, ValueError):
+                requested_week = None
+
+        # The route has already loaded this same season/week into the shared
+        # cache, so this is normally a cheap cache read. It lets the selector
+        # expose only weeks for which Yahoo actually has matchup/scoring data.
+        available_weeks = [selected_week]
+        try:
+            from app.yahoo_live_cache import load_cached_yahoo_dashboard_data
+
+            dashboard_data = load_cached_yahoo_dashboard_data(
+                request=request,
+                season=selected_season,
+                requested_week=requested_week,
+            )
+            available_weeks = [
+                int(week_number)
+                for week_number in dashboard_data.get("available_weeks", [])
+            ] or [selected_week]
+        except Exception as exc:
+            print(f"WARNING: Could not load selector week availability: {exc}")
+            available_weeks = list(range(1, selected_week + 1))
+
+        selector = build_period_selector(
+            selected_week,
+            selected_season,
+            available_weeks,
+        )
 
         html = re.sub(
             r'<span class="updated-label">\s*Through Week \d+\s*</span>',

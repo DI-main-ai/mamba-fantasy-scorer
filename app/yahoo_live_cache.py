@@ -38,7 +38,13 @@ def _data_signature(data: Dict[str, Any]) -> str:
 
 
 def _current_week_state(data: Dict[str, Any]) -> str:
-    """Classify current-season activity as live, idle, or historical."""
+    """Classify current-season activity as live, idle, or historical.
+
+    Yahoo's scoreboard can expose current W/L direction before a matchup is
+    final, so for the current season we treat any non-zero fantasy scoring as
+    live activity. This favors timely Sunday updates; when nobody is viewing
+    Mamba, no browser polling occurs and therefore no Yahoo traffic is created.
+    """
 
     season = int(data.get("season") or 0)
     current_year = datetime.now(timezone.utc).year
@@ -54,39 +60,19 @@ def _current_week_state(data: Dict[str, Any]) -> str:
             for value in scores.values()
             if value is not None
         )
+        return "live" if has_nonzero_score else "idle"
 
-        results = []
-        for team_data in data.get("yahoo_teams", {}).values():
-            result = team_data.get("weekly_results", {}).get(current_week)
-            if result:
-                results.append(str(result))
-
-        has_pending = any(result == "P" for result in results)
-        if has_nonzero_score and has_pending:
-            return "live"
-        return "idle"
-
-    matchups = data.get("matchups", [])
-    has_nonzero_score = False
-    has_unfinished = False
-    final_statuses = {"postevent", "final", "complete", "completed"}
-
-    for matchup in matchups:
-        status = str(matchup.get("status") or "").lower()
-        if status not in final_statuses:
-            has_unfinished = True
+    for matchup in data.get("matchups", []):
         for team in matchup.get("teams", []):
             score = team.get("score")
             if score is None:
                 continue
             try:
                 if abs(float(score)) > 0.000001:
-                    has_nonzero_score = True
+                    return "live"
             except (TypeError, ValueError):
                 pass
 
-    if has_nonzero_score and has_unfinished:
-        return "live"
     return "idle"
 
 
@@ -227,7 +213,7 @@ def load_cached_yahoo_dashboard_data(
                 error=f"Yahoo returned HTTP {exc.status_code}",
             )
         raise
-    except Exception as exc:
+    except Exception:
         if cached:
             return _decorate_cached_data(
                 cached,

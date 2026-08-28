@@ -1,3 +1,4 @@
+from datetime import datetime, timezone
 from typing import Optional
 
 from fastapi import APIRouter, Query, Request
@@ -12,7 +13,8 @@ from app.routes import (
     templates,
 )
 from app.scoring import build_hybrid_standings
-from app.yahoo_dashboard import MAMBA_SCORING_END_WEEK, load_yahoo_dashboard_data
+from app.yahoo_dashboard import MAMBA_SCORING_END_WEEK
+from app.yahoo_live_cache import load_cached_yahoo_dashboard_data
 from app.yahoo_seasons import discover_mamba_seasons
 
 
@@ -51,11 +53,14 @@ def live_dashboard_home(
     ):
         return historical_2025_home(request=request, week=week)
 
-    data = load_yahoo_dashboard_data(
+    data = load_cached_yahoo_dashboard_data(
         request=request,
         season=selected_season,
         requested_week=week,
     )
+
+    refresh_meta = data.get("_refresh_meta", {})
+    current_calendar_season = datetime.now(timezone.utc).year
 
     common_context = {
         "request": request,
@@ -67,6 +72,15 @@ def live_dashboard_home(
         "yahoo_source": True,
         "league_name": data.get("league_name") or "The Mamba League",
         "league_key": data.get("league_key"),
+        "yahoo_refresh_epoch": float(refresh_meta.get("refreshed_at") or 0),
+        "yahoo_data_version": str(refresh_meta.get("signature") or ""),
+        "yahoo_refresh_interval_seconds": int(
+            refresh_meta.get("refresh_interval_seconds") or 300
+        ),
+        "yahoo_refresh_stale": bool(refresh_meta.get("stale")),
+        "yahoo_refresh_error": refresh_meta.get("error"),
+        "live_refresh_enabled": selected_season == current_calendar_season,
+        "live_refresh_requested_week": week,
     }
 
     if data["mode"] == "matchups":

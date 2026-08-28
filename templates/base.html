@@ -11,30 +11,20 @@
     <link rel="stylesheet" href="{{ url_for('static', path='css/style.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', path='css/rank-movement.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', path='css/live-status.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', path='css/matchups.css') }}">
 </head>
 <body>
     <header class="site-header">
         <div class="header-content">
             <a class="brand" href="/">
-                <div class="brand-mark">
-                    <img src="{{ url_for('static', path='images/mamba-logo-transparent.png') }}" alt="Mamba Fantasy Logo" class="brand-logo" width="34" height="34" style="display:block;width:34px;height:34px;object-fit:contain;">
-                </div>
-                <div class="brand-copy">
-                    <span class="brand-name">Mamba Fantasy</span>
-                    <span class="brand-subtitle">Hybrid Fantasy Football Rankings</span>
-                </div>
+                <div class="brand-mark"><img src="{{ url_for('static', path='images/mamba-logo-transparent.png') }}" alt="Mamba Fantasy Logo" class="brand-logo" width="34" height="34" style="display:block;width:34px;height:34px;object-fit:contain;"></div>
+                <div class="brand-copy"><span class="brand-name">Mamba Fantasy</span><span class="brand-subtitle">Hybrid Fantasy Football Rankings</span></div>
             </a>
             <div class="header-status-block">
-                <div class="season-status">
-                    <span class="season-label">{{ season }} Season</span>
-                    <span class="status-divider"></span>
-                    <span class="week-label">Week {{ current_week }}</span>
-                </div>
+                <div class="season-status"><span class="season-label">{{ season }} Season</span><span class="status-divider"></span><span class="week-label">Week {{ current_week }}</span></div>
                 {% if yahoo_source and yahoo_refresh_epoch %}
                 <div id="yahoo-refresh-status" class="yahoo-refresh-status {% if yahoo_refresh_stale %}is-stale{% endif %}" data-season="{{ season }}" data-current-week="{{ current_week }}" data-requested-week="{% if live_refresh_requested_week is not none %}{{ live_refresh_requested_week }}{% endif %}" data-live-enabled="{% if live_refresh_enabled %}1{% else %}0{% endif %}" data-version="{{ yahoo_data_version }}" data-refreshed-at="{{ yahoo_refresh_epoch }}" data-refresh-seconds="{{ yahoo_refresh_interval_seconds }}" data-stale="{% if yahoo_refresh_stale %}1{% else %}0{% endif %}">
-                    <span class="yahoo-refresh-dot" aria-hidden="true"></span>
-                    <span class="yahoo-refresh-mode">Yahoo</span>
-                    <span class="yahoo-refresh-time" id="yahoo-refresh-time">Updated recently</span>
+                    <span class="yahoo-refresh-dot" aria-hidden="true"></span><span class="yahoo-refresh-mode">Yahoo</span><span class="yahoo-refresh-time" id="yahoo-refresh-time">Updated recently</span>
                 </div>
                 {% endif %}
             </div>
@@ -51,129 +41,33 @@
                     <p class="section-kicker section-kicker-gold">Official Yahoo Matchups</p>
                     <h2>Week {{ current_week }} Head-to-Head Matchups</h2>
                     <p class="section-description">The official Yahoo head-to-head scores for the selected week.</p>
+                    <nav class="section-jump-nav" aria-label="Jump to another section">
+                        <a class="section-jump-link" href="#hybrid-standings">Hybrid</a>
+                        <a class="section-jump-link" href="#yahoo-breakdown">Yahoo W/L</a>
+                        <a class="section-jump-link" href="#points-breakdown">Points For</a>
+                        <a class="section-jump-link" href="#mamba-breakdown">Mamba Points</a>
+                        <a class="section-jump-link is-active" href="#weekly-matchups">Matchups</a>
+                    </nav>
                 </div>
                 <div class="week-pill">Week {{ current_week }}</div>
             </div>
-
             <div class="matchup-card-grid">
                 {% for matchup in matchups %}
-                    {% set first = matchup.teams[0] %}
-                    {% set second = matchup.teams[1] %}
-                    {% set first_won = matchup.winner_team_key == first.team_key %}
-                    {% set second_won = matchup.winner_team_key == second.team_key %}
-                    {% set is_final = matchup.status in ['postevent', 'final', 'complete', 'completed'] or matchup.winner_team_key %}
-                    {% set is_tie = is_final and not matchup.winner_team_key and first.score is not none and second.score is not none and first.score == second.score %}
-                    <article class="matchup-card">
-                        <div class="matchup-card-status">
-                            {% if is_tie %}TIE{% elif is_final %}FINAL{% else %}MATCHUP{% endif %}
-                        </div>
-                        <div class="matchup-team-row {% if first_won %}matchup-winner{% endif %}">
-                            <span class="matchup-team-name">{{ first.name }}</span>
-                            <span class="matchup-score">{% if first.score is not none %}{{ "%.2f" | format(first.score) }}{% else %}—{% endif %}</span>
-                        </div>
-                        <div class="matchup-team-row {% if second_won %}matchup-winner{% endif %}">
-                            <span class="matchup-team-name">{{ second.name }}</span>
-                            <span class="matchup-score">{% if second.score is not none %}{{ "%.2f" | format(second.score) }}{% else %}—{% endif %}</span>
-                        </div>
-                    </article>
-                {% else %}
-                    <div class="standings-card matchup-empty">Yahoo has not returned matchup data for this week yet.</div>
-                {% endfor %}
+                    {% set first = matchup.teams[0] %}{% set second = matchup.teams[1] %}{% set first_won = matchup.winner_team_key == first.team_key %}{% set second_won = matchup.winner_team_key == second.team_key %}{% set is_final = matchup.status in ['postevent', 'final', 'complete', 'completed'] or matchup.winner_team_key %}{% set is_tie = is_final and not matchup.winner_team_key and first.score is not none and second.score is not none and first.score == second.score %}
+                    <article class="matchup-card"><div class="matchup-card-status">{% if is_tie %}TIE{% elif is_final %}FINAL{% else %}MATCHUP{% endif %}</div><div class="matchup-team-row {% if first_won %}matchup-winner{% endif %}"><span class="matchup-team-name">{{ first.name }}</span><span class="matchup-score">{% if first.score is not none %}{{ "%.2f" | format(first.score) }}{% else %}—{% endif %}</span></div><div class="matchup-team-row {% if second_won %}matchup-winner{% endif %}"><span class="matchup-team-name">{{ second.name }}</span><span class="matchup-score">{% if second.score is not none %}{{ "%.2f" | format(second.score) }}{% else %}—{% endif %}</span></div></article>
+                {% else %}<div class="standings-card matchup-empty">Yahoo has not returned matchup data for this week yet.</div>{% endfor %}
             </div>
         </section>
         {% endif %}
     </main>
 
-    <footer class="site-footer">
-        <p>Powered by the Mamba Scoring System{% if yahoo_source %} · Fantasy data provided by <a href="https://football.fantasysports.yahoo.com/" target="_blank" rel="noopener noreferrer">Yahoo Fantasy</a>{% endif %}</p>
-    </footer>
+    <footer class="site-footer"><p>Powered by the Mamba Scoring System{% if yahoo_source %} · Fantasy data provided by <a href="https://football.fantasysports.yahoo.com/" target="_blank" rel="noopener noreferrer">Yahoo Fantasy</a>{% endif %}</p></footer>
 
     <script>
-    (function () {
-        const auditSectionIds = ['yahoo-breakdown','points-breakdown','mamba-breakdown'];
-        function scrollAuditTablesToLatestWeek() {
-            auditSectionIds.forEach(function (sectionId) {
-                const section = document.getElementById(sectionId);
-                if (!section) return;
-                const scroller = section.querySelector('.table-scroll');
-                if (!scroller) return;
-                scroller.scrollLeft = Math.max(0, scroller.scrollWidth - scroller.clientWidth);
-            });
-        }
-        function restoreVerticalPosition() {
-            const saved = sessionStorage.getItem('mamba-live-scroll-y');
-            if (saved === null) return;
-            sessionStorage.removeItem('mamba-live-scroll-y');
-            const y = Number(saved);
-            if (Number.isFinite(y)) requestAnimationFrame(function () { window.scrollTo(0, y); });
-        }
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', function () { requestAnimationFrame(scrollAuditTablesToLatestWeek); restoreVerticalPosition(); });
-        } else {
-            requestAnimationFrame(scrollAuditTablesToLatestWeek); restoreVerticalPosition();
-        }
-        window.addEventListener('load', function () { requestAnimationFrame(scrollAuditTablesToLatestWeek); });
-    })();
+    (function(){const ids=['yahoo-breakdown','points-breakdown','mamba-breakdown'];function s(){ids.forEach(function(id){const x=document.getElementById(id);if(!x)return;const q=x.querySelector('.table-scroll');if(q)q.scrollLeft=Math.max(0,q.scrollWidth-q.clientWidth);});}function r(){const v=sessionStorage.getItem('mamba-live-scroll-y');if(v===null)return;sessionStorage.removeItem('mamba-live-scroll-y');const y=Number(v);if(Number.isFinite(y))requestAnimationFrame(function(){window.scrollTo(0,y);});}if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',function(){requestAnimationFrame(s);r();});else{requestAnimationFrame(s);r();}window.addEventListener('load',function(){requestAnimationFrame(s);});})();
     </script>
-
     <script>
-    (function () {
-        const status = document.getElementById('yahoo-refresh-status');
-        if (!status) return;
-        const timeLabel = document.getElementById('yahoo-refresh-time');
-        const modeLabel = status.querySelector('.yahoo-refresh-mode');
-        const season = Number(status.dataset.season || '0');
-        const pageWeek = Number(status.dataset.currentWeek || '1');
-        const requestedWeek = status.dataset.requestedWeek || '';
-        const liveEnabled = status.dataset.liveEnabled === '1';
-        let dataVersion = status.dataset.version || '';
-        let refreshedAt = Number(status.dataset.refreshedAt || '0');
-        let refreshSeconds = Math.max(30, Number(status.dataset.refreshSeconds || '300'));
-        let stale = status.dataset.stale === '1';
-        let timer = null;
-        function formatClock(epochSeconds) {
-            if (!epochSeconds) return 'unknown time';
-            return new Date(epochSeconds * 1000).toLocaleTimeString([], {hour:'numeric',minute:'2-digit',second:'2-digit'});
-        }
-        function relativeAge(epochSeconds) {
-            if (!epochSeconds) return '';
-            const seconds = Math.max(0, Math.round(Date.now()/1000-epochSeconds));
-            if (seconds < 10) return 'just now';
-            if (seconds < 60) return seconds+'s ago';
-            const minutes = Math.floor(seconds/60);
-            if (minutes < 60) return minutes+'m ago';
-            return Math.floor(minutes/60)+'h ago';
-        }
-        function renderStatus() {
-            const liveMode = liveEnabled && refreshSeconds <= 60 && !stale;
-            status.classList.toggle('is-live', liveMode);
-            status.classList.toggle('is-stale', stale);
-            if (modeLabel) modeLabel.textContent = liveMode ? 'LIVE' : 'Yahoo';
-            if (!timeLabel) return;
-            if (stale) { timeLabel.textContent='Yahoo temporarily unavailable · showing '+formatClock(refreshedAt); return; }
-            timeLabel.textContent='Updated '+formatClock(refreshedAt)+' · '+relativeAge(refreshedAt);
-        }
-        function scheduleNext(seconds) {
-            if (!liveEnabled) return;
-            if (timer) window.clearTimeout(timer);
-            timer=window.setTimeout(pollYahoo, Math.max(30,seconds)*1000);
-        }
-        async function pollYahoo() {
-            const params=new URLSearchParams(); params.set('season',String(season)); if(requestedWeek) params.set('week',requestedWeek);
-            try {
-                const response=await fetch('/api/yahoo/refresh-status?'+params.toString(),{credentials:'same-origin',headers:{'Accept':'application/json'},cache:'no-store'});
-                if(!response.ok) throw new Error('Yahoo refresh status failed');
-                const payload=await response.json();
-                const nextVersion=String(payload.data_version||''); const nextWeek=Number(payload.current_week||pageWeek);
-                refreshedAt=Number(payload.refreshed_at||refreshedAt); refreshSeconds=Math.max(30,Number(payload.refresh_interval_seconds||refreshSeconds)); stale=Boolean(payload.stale); renderStatus();
-                const versionChanged=Boolean(dataVersion&&nextVersion&&nextVersion!==dataVersion); const autoWeekChanged=Boolean(!requestedWeek&&nextWeek!==pageWeek);
-                if(versionChanged||autoWeekChanged){sessionStorage.setItem('mamba-live-scroll-y',String(window.scrollY));window.location.reload();return;}
-                if(nextVersion) dataVersion=nextVersion;
-            } catch(error){stale=true;renderStatus();refreshSeconds=60;}
-            scheduleNext(refreshSeconds);
-        }
-        renderStatus(); window.setInterval(renderStatus,15000); scheduleNext(refreshSeconds);
-    })();
+    (function(){const status=document.getElementById('yahoo-refresh-status');if(!status)return;const timeLabel=document.getElementById('yahoo-refresh-time'),modeLabel=status.querySelector('.yahoo-refresh-mode'),season=Number(status.dataset.season||'0'),pageWeek=Number(status.dataset.currentWeek||'1'),requestedWeek=status.dataset.requestedWeek||'',liveEnabled=status.dataset.liveEnabled==='1';let dataVersion=status.dataset.version||'',refreshedAt=Number(status.dataset.refreshedAt||'0'),refreshSeconds=Math.max(30,Number(status.dataset.refreshSeconds||'300')),stale=status.dataset.stale==='1',timer=null;function clock(e){if(!e)return'unknown time';return new Date(e*1000).toLocaleTimeString([],{hour:'numeric',minute:'2-digit',second:'2-digit'});}function age(e){if(!e)return'';const s=Math.max(0,Math.round(Date.now()/1000-e));if(s<10)return'just now';if(s<60)return s+'s ago';const m=Math.floor(s/60);if(m<60)return m+'m ago';return Math.floor(m/60)+'h ago';}function render(){const live=liveEnabled&&refreshSeconds<=60&&!stale;status.classList.toggle('is-live',live);status.classList.toggle('is-stale',stale);if(modeLabel)modeLabel.textContent=live?'LIVE':'Yahoo';if(!timeLabel)return;if(stale){timeLabel.textContent='Yahoo temporarily unavailable · showing '+clock(refreshedAt);return;}timeLabel.textContent='Updated '+clock(refreshedAt)+' · '+age(refreshedAt);}function schedule(sec){if(!liveEnabled)return;if(timer)clearTimeout(timer);timer=setTimeout(poll,Math.max(30,sec)*1000);}async function poll(){const p=new URLSearchParams();p.set('season',String(season));if(requestedWeek)p.set('week',requestedWeek);try{const response=await fetch('/api/yahoo/refresh-status?'+p.toString(),{credentials:'same-origin',headers:{Accept:'application/json'},cache:'no-store'});if(!response.ok)throw new Error();const payload=await response.json(),nextVersion=String(payload.data_version||''),nextWeek=Number(payload.current_week||pageWeek);refreshedAt=Number(payload.refreshed_at||refreshedAt);refreshSeconds=Math.max(30,Number(payload.refresh_interval_seconds||refreshSeconds));stale=Boolean(payload.stale);render();if((dataVersion&&nextVersion&&nextVersion!==dataVersion)||(!requestedWeek&&nextWeek!==pageWeek)){sessionStorage.setItem('mamba-live-scroll-y',String(window.scrollY));location.reload();return;}if(nextVersion)dataVersion=nextVersion;}catch(e){stale=true;render();refreshSeconds=60;}schedule(refreshSeconds);}render();setInterval(render,15000);schedule(refreshSeconds);})();
     </script>
 </body>
 </html>

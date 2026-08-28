@@ -1,0 +1,82 @@
+.header-status-block {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 6px;
+}
+
+.yahoo-refresh-status {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 7px;
+    min-height: 18px;
+    color: var(--text-muted);
+    font-size: 10px;
+    font-weight: 650;
+    line-height: 1.25;
+    text-align: right;
+    white-space: nowrap;
+}
+
+.yahoo-refresh-dot {
+    width: 6px;
+    height: 6px;
+    flex: 0 0 6px;
+    border-radius: 50%;
+    background: var(--purple-light);
+    box-shadow: 0 0 8px rgba(125, 70, 173, 0.45);
+}
+
+.yahoo-refresh-status.is-live .yahoo-refresh-dot {
+    background: var(--green);
+    box-shadow: 0 0 9px rgba(101, 217, 151, 0.65);
+}
+
+.yahoo-refresh-status.is-live .yahoo-refresh-mode {
+    color: var(--green);
+}
+
+.yahoo-refresh-status.is-stale {
+    color: var(--red);
+}
+
+.yahoo-refresh-status.is-stale .yahoo-refresh-dot {
+    background: var(--red);
+    box-shadow: 0 0 9px rgba(255, 124, 124, 0.55);
+}
+
+.yahoo-refresh-mode {
+    color: var(--purple-light);
+    font-size: 9px;
+    font-weight: 900;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.yahoo-refresh-time {
+    color: inherit;
+}
+
+@media (max-width: 620px) {
+    .header-status-block {
+        gap: 4px;
+    }
+
+    .yahoo-refresh-status {
+        max-width: 205px;
+        gap: 5px;
+        font-size: 8px;
+        white-space: normal;
+    }
+
+    .yahoo-refresh-mode {
+        font-size: 8px;
+    }
+
+    .yahoo-refresh-dot {
+        width: 5px;
+        height: 5px;
+        flex-basis: 5px;
+    }
+}

@@ -11,15 +11,19 @@ from app.yahoo_seasons import discover_mamba_seasons
 
 HYBRID_START_SEASON = 2020
 MAMBA_SCORING_END_WEEK = 13
-SPECIAL_MAMBA_SCORING_END_WEEKS = {
-    2024: 14,
-}
 MAX_YAHOO_WEEK = 18
 
 
 def mamba_scoring_end_week(season: int) -> int:
-    """Return the final week used for Mamba/Hybrid scoring for a season."""
-    return SPECIAL_MAMBA_SCORING_END_WEEKS.get(int(season), MAMBA_SCORING_END_WEEK)
+    """Return the final week used for Mamba/Hybrid scoring for a season.
+
+    Hybrid-era seasons 2020-2024 score through Week 14. Beginning in 2025,
+    Hybrid/Mamba scoring ends after Week 13.
+    """
+    season = int(season)
+    if HYBRID_START_SEASON <= season <= 2024:
+        return 14
+    return MAMBA_SCORING_END_WEEK
 
 
 def _as_int(value: Any, default: int) -> int:
@@ -139,6 +143,7 @@ def load_yahoo_dashboard_data(
     Hybrid/Mamba scoring exists only for seasons 2020 and newer. Seasons before
     2020 are loaded as Yahoo-only history: cumulative Yahoo standings through
     the selected week plus the official head-to-head matchups for that week.
+    Hybrid scoring runs through Week 14 for 2020-2024 and Week 13 for 2025+.
     """
     season_record = _resolve_season_record(request, season)
     league_key = str(season_record["league_key"])

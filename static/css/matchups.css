@@ -1,0 +1,79 @@
+.matchup-card-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+}
+
+.matchup-card {
+    overflow: hidden;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-medium);
+    background: var(--card);
+    box-shadow: var(--shadow);
+}
+
+.matchup-card-status {
+    padding: 10px 16px 7px;
+    color: var(--text-muted);
+    font-size: 10px;
+    font-weight: 900;
+    letter-spacing: .12em;
+}
+
+.matchup-team-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 18px;
+    min-height: 54px;
+    padding: 12px 16px;
+    border-top: 1px solid var(--border);
+}
+
+.matchup-team-name {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--text-secondary);
+    font-weight: 700;
+}
+
+.matchup-score {
+    flex: 0 0 auto;
+    color: var(--text-primary);
+    font-size: 18px;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+}
+
+.matchup-winner {
+    background: rgba(253, 185, 39, .07);
+}
+
+.matchup-winner .matchup-team-name,
+.matchup-winner .matchup-score {
+    color: var(--gold);
+    font-weight: 900;
+}
+
+.matchup-empty {
+    grid-column: 1 / -1;
+    padding: 24px;
+    color: var(--text-secondary);
+}
+
+@media (max-width: 700px) {
+    .matchup-card-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .matchup-team-row {
+        min-height: 50px;
+        padding: 11px 14px;
+    }
+
+    .matchup-score {
+        font-size: 17px;
+    }
+}

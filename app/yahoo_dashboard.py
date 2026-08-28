@@ -9,6 +9,7 @@ from app.yahoo_mamba import _extract_matchups, _extract_unique_teams, _league_me
 from app.yahoo_seasons import discover_mamba_seasons
 
 
+HYBRID_START_SEASON = 2020
 MAMBA_SCORING_END_WEEK = 13
 SPECIAL_MAMBA_SCORING_END_WEEKS = {
     2024: 14,
@@ -133,7 +134,12 @@ def load_yahoo_dashboard_data(
     season: int,
     requested_week: Optional[int],
 ) -> Dict[str, Any]:
-    """Load one Mamba League season from Yahoo for the shared dashboard UI."""
+    """Load one Mamba League season from Yahoo for the shared dashboard UI.
+
+    Hybrid/Mamba scoring exists only for seasons 2020 and newer. Seasons before
+    2020 are loaded as Yahoo-only history: cumulative Yahoo standings through
+    the selected week plus the official head-to-head matchups for that week.
+    """
     season_record = _resolve_season_record(request, season)
     league_key = str(season_record["league_key"])
     encoded_key = urllib.parse.quote(league_key, safe=".-_")
@@ -145,6 +151,7 @@ def load_yahoo_dashboard_data(
     end_week = _as_int(metadata.get("end_week"), MAX_YAHOO_WEEK)
     end_week = max(1, min(end_week, MAX_YAHOO_WEEK))
     current_week = _as_int(metadata.get("current_week"), 1)
+    hybrid_scoring_enabled = int(season) >= HYBRID_START_SEASON
     scoring_end_week = min(mamba_scoring_end_week(season), end_week)
 
     teams_payload = _fantasy_get(request, f"league/{encoded_key}/teams")
@@ -163,14 +170,22 @@ def load_yahoo_dashboard_data(
                 current_week=current_week,
                 end_week=end_week,
             )
-        else:
+        elif hybrid_scoring_enabled:
             selected_week = scoring_end_week
+        else:
+            # Keep historical Yahoo-only seasons opening at the traditional
+            # Week 13 regular-season checkpoint while still allowing any week
+            # to be selected from the dropdown.
+            selected_week = min(MAMBA_SCORING_END_WEEK, end_week)
     else:
         selected_week = max(1, min(int(requested_week), end_week))
 
     available_weeks = list(range(1, end_week + 1))
 
-    if selected_week > scoring_end_week:
+    # For Hybrid-era seasons, weeks after the Mamba scoring cutoff remain
+    # matchup-only. Yahoo-only seasons do not use this cutoff and continue to
+    # show Yahoo standings plus matchups for whichever week is selected.
+    if hybrid_scoring_enabled and selected_week > scoring_end_week:
         scoreboard_payload = _fantasy_get(
             request, f"league/{encoded_key}/scoreboard;week={selected_week}"
         )
@@ -190,6 +205,7 @@ def load_yahoo_dashboard_data(
             "weeks": {},
             "weekly_mamba_points": {},
             "yahoo_teams": {},
+            "hybrid_scoring_enabled": True,
         }
 
     week_numbers = [str(number) for number in range(1, selected_week + 1)]
@@ -255,10 +271,13 @@ def load_yahoo_dashboard_data(
             )
 
         weeks[str(week_number)] = week_scores
-        weekly_mamba_points[str(week_number)] = calculate_weekly_mamba_points(week_scores)
+        if hybrid_scoring_enabled:
+            weekly_mamba_points[str(week_number)] = calculate_weekly_mamba_points(
+                week_scores
+            )
 
     return {
-        "mode": "dashboard",
+        "mode": "dashboard" if hybrid_scoring_enabled else "yahoo_only",
         "season": season,
         "league_key": league_key,
         "league_name": metadata.get("name") or "The Mamba League",
@@ -271,4 +290,5 @@ def load_yahoo_dashboard_data(
         "weeks": weeks,
         "weekly_mamba_points": weekly_mamba_points,
         "yahoo_teams": yahoo_teams,
+        "hybrid_scoring_enabled": hybrid_scoring_enabled,
     }

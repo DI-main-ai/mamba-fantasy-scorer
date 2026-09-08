@@ -19,11 +19,11 @@ MAX_YAHOO_WEEK = 18
 def mamba_scoring_end_week(season: int) -> int:
     """Return the final week used for Mamba/Hybrid scoring for a season.
 
-    Hybrid-era seasons 2020-2024 score through Week 14. Beginning in 2025,
-    Hybrid/Mamba scoring ends after Week 13.
+    The 2020 season and seasons from 2025 onward end after Week 13.
+    Seasons 2021-2024 score through Week 14.
     """
     season = int(season)
-    if HYBRID_START_SEASON <= season <= 2024:
+    if 2021 <= season <= 2024:
         return 14
     return MAMBA_SCORING_END_WEEK
 

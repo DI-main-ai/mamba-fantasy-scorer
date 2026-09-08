@@ -10,8 +10,8 @@ from app.yahoo_dashboard import load_yahoo_dashboard_data
 from app.yahoo_shared_auth import _upstash_command, _upstash_config
 
 
-CACHE_PREFIX = "mamba:yahoo:dashboard:v5"
-LOCK_PREFIX = "mamba:yahoo:dashboard-lock:v5"
+CACHE_PREFIX = "mamba:yahoo:dashboard:v6"
+LOCK_PREFIX = "mamba:yahoo:dashboard-lock:v6"
 LIVE_REFRESH_SECONDS = 45
 IDLE_REFRESH_SECONDS = 300
 HISTORICAL_REFRESH_SECONDS = 3600
@@ -45,7 +45,6 @@ def _current_week_state(data: Dict[str, Any]) -> str:
     live activity. This favors timely Sunday updates; when nobody is viewing
     Mamba, no browser polling occurs and therefore no Yahoo traffic is created.
     """
-
     season = int(data.get("season") or 0)
     current_year = datetime.now(timezone.utc).year
     if season != current_year:
@@ -168,7 +167,6 @@ def load_cached_yahoo_dashboard_data(
     for a given season/week view, even when many league members are watching.
     If Yahoo temporarily fails, the last successful cached snapshot is served.
     """
-
     key = _cache_key(season, requested_week)
     cached = _read_cache(key)
     now = time.time()

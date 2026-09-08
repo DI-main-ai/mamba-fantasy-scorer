@@ -1,0 +1,5 @@
+/* Let short season histories fit their actual columns instead of stretching
+   a single week across the old 1450px minimum. Long histories still scroll. */
+.audit-table {
+    min-width: 100%;
+}

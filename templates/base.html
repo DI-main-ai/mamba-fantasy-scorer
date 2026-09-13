@@ -13,6 +13,8 @@
     <link rel="stylesheet" href="{{ url_for('static', path='css/live-status.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', path='css/matchups.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', path='css/audit-scroll.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', path='css/team-logos.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', path='css/matchup-detail.css') }}">
 </head>
 <body>
     <header class="site-header">
@@ -41,7 +43,7 @@
                 <div>
                     <p class="section-kicker section-kicker-gold">Official Yahoo Matchups</p>
                     <h2>Week {{ current_week }} Head-to-Head Matchups</h2>
-                    <p class="section-description">The official Yahoo head-to-head scores for the selected week.</p>
+                    <p class="section-description">Tap a matchup to view each team's Yahoo lineup and individual player points.</p>
                     <nav class="section-jump-nav" aria-label="Jump to another section">
                         {% if hybrid_scoring_enabled %}
                         <a class="section-jump-link" href="#hybrid-standings">Hybrid</a>
@@ -59,7 +61,24 @@
             <div class="matchup-card-grid">
                 {% for matchup in matchups %}
                     {% set first = matchup.teams[0] %}{% set second = matchup.teams[1] %}{% set first_won = matchup.winner_team_key == first.team_key %}{% set second_won = matchup.winner_team_key == second.team_key %}{% set is_final = matchup.status in ['postevent', 'final', 'complete', 'completed'] or matchup.winner_team_key %}{% set is_tie = is_final and not matchup.winner_team_key and first.score is not none and second.score is not none and first.score == second.score %}
-                    <article class="matchup-card"><div class="matchup-card-status">{% if is_tie %}TIE{% elif is_final %}FINAL{% else %}MATCHUP{% endif %}</div><div class="matchup-team-row {% if first_won %}matchup-winner{% endif %}"><span class="matchup-team-name">{{ first.name }}</span><span class="matchup-score">{% if first.score is not none %}{{ "%.2f" | format(first.score) }}{% else %}—{% endif %}</span></div><div class="matchup-team-row {% if second_won %}matchup-winner{% endif %}"><span class="matchup-team-name">{{ second.name }}</span><span class="matchup-score">{% if second.score is not none %}{{ "%.2f" | format(second.score) }}{% else %}—{% endif %}</span></div></article>
+                    <a class="matchup-card" href="/matchup?season={{ season }}&week={{ current_week }}&matchup={{ loop.index0 }}" aria-label="View {{ first.name }} versus {{ second.name }} player breakdown">
+                        <div class="matchup-card-status">{% if is_tie %}TIE{% elif is_final %}FINAL{% else %}MATCHUP{% endif %}</div>
+                        <div class="matchup-team-row {% if first_won %}matchup-winner{% endif %}">
+                            <span class="matchup-team-identity">
+                                {% if first.logo_url %}<img class="matchup-team-logo" src="{{ first.logo_url }}" alt="{{ first.name }} logo" loading="lazy">{% endif %}
+                                <span class="matchup-team-name">{{ first.name }}</span>
+                            </span>
+                            <span class="matchup-score">{% if first.score is not none %}{{ "%.2f" | format(first.score) }}{% else %}—{% endif %}</span>
+                        </div>
+                        <div class="matchup-team-row {% if second_won %}matchup-winner{% endif %}">
+                            <span class="matchup-team-identity">
+                                {% if second.logo_url %}<img class="matchup-team-logo" src="{{ second.logo_url }}" alt="{{ second.name }} logo" loading="lazy">{% endif %}
+                                <span class="matchup-team-name">{{ second.name }}</span>
+                            </span>
+                            <span class="matchup-score">{% if second.score is not none %}{{ "%.2f" | format(second.score) }}{% else %}—{% endif %}</span>
+                        </div>
+                        <div class="matchup-card-action">View lineup &amp; player points →</div>
+                    </a>
                 {% else %}<div class="standings-card matchup-empty">Yahoo has not returned matchup data for this week yet.</div>{% endfor %}
             </div>
         </section>

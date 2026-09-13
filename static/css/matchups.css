@@ -5,11 +5,21 @@
 }
 
 .matchup-card {
+    display: block;
     overflow: hidden;
     border: 1px solid var(--border);
     border-radius: var(--radius-medium);
     background: var(--card);
     box-shadow: var(--shadow);
+    transition: transform 150ms ease, border-color 150ms ease, background 150ms ease;
+}
+
+.matchup-card:hover,
+.matchup-card:focus-visible {
+    transform: translateY(-2px);
+    border-color: rgba(253, 185, 39, .48);
+    background: var(--card-hover);
+    outline: none;
 }
 
 .matchup-card-status {
@@ -57,10 +67,34 @@
     font-weight: 900;
 }
 
+.matchup-card-action {
+    padding: 10px 16px 12px;
+    border-top: 1px solid var(--border);
+    color: var(--gold);
+    font-size: 10px;
+    font-weight: 850;
+    letter-spacing: .035em;
+    text-align: right;
+}
+
 .matchup-empty {
     grid-column: 1 / -1;
     padding: 24px;
     color: var(--text-secondary);
+}
+
+.matchup-detail-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 34px;
+    padding: 7px 11px;
+    border: 1px solid rgba(253, 185, 39, .42);
+    border-radius: 999px;
+    color: var(--gold);
+    font-size: 10px;
+    font-weight: 850;
+    white-space: nowrap;
 }
 
 @media (max-width: 700px) {

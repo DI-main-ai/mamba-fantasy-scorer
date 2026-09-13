@@ -25,8 +25,7 @@
     {% endif %}
 {% endmacro %}
 
-{% macro team_avatar(name) %}
-    {% set logo = team_logos_by_name.get(name, '') if team_logos_by_name else '' %}
+{% macro team_avatar(name, logo='') %}
     <div class="team-avatar audit-avatar">
         {% if logo %}
         <img class="team-logo-image" src="{{ logo }}" alt="{{ name }} logo" loading="lazy">
@@ -95,7 +94,7 @@
                         <td class="audit-team-sticky">
                             <div class="team-cell-content">
                                 <span class="inline-rank">{{ team.rank }}</span>
-                                {{ team_avatar(team.team_name) }}
+                                {{ team_avatar(team.team_name, team.logo_url) }}
                                 <div class="team-information">
                                     <div class="team-name-line">
                                         <span class="team-name">{{ team.team_name }}</span>

@@ -21,7 +21,7 @@
         </div>
     </div>
 
-    <form class="scoring-log-controls" method="get" action="/scoring-log">
+    <form class="scoring-log-controls" method="get" action="/scoring-log" onsubmit="const m=this.elements.matchup;if(m&&!m.value)m.disabled=true;">
         <input type="hidden" name="season" value="{{ season }}">
 
         <div class="scoring-filter">

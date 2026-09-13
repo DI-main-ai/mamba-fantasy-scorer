@@ -65,6 +65,15 @@ def _add_yahoo_previous_week_rank_changes(
             row["rank_change"] = old_rank - int(row["rank"])
 
 
+def _attach_team_logos(
+    rows: List[Dict[str, Any]],
+    team_logos_by_name: Dict[str, str],
+) -> None:
+    for row in rows:
+        team_name = str(row.get("team_name") or "")
+        row["logo_url"] = team_logos_by_name.get(team_name, "")
+
+
 @live_dashboard_router.get("/", response_class=HTMLResponse)
 def live_dashboard_home(
     request: Request,
@@ -142,6 +151,7 @@ def live_dashboard_home(
             weeks=weeks,
             week_numbers=week_numbers,
         )
+        _attach_team_logos(yahoo_rows, team_logos_by_name)
 
         return templates.TemplateResponse(
             "yahoo_only.html",
@@ -180,6 +190,11 @@ def live_dashboard_home(
         points_for_rows=points_for_rows,
         mamba_rows=mamba_rows,
     )
+
+    _attach_team_logos(standings, team_logos_by_name)
+    _attach_team_logos(yahoo_rows, team_logos_by_name)
+    _attach_team_logos(points_for_rows, team_logos_by_name)
+    _attach_team_logos(mamba_rows, team_logos_by_name)
 
     return templates.TemplateResponse(
         "home.html",

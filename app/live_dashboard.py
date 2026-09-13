@@ -66,12 +66,17 @@ def _add_yahoo_previous_week_rank_changes(
 
 
 def _attach_team_logos(
-    rows: List[Dict[str, Any]],
+    rows: List[Any],
     team_logos_by_name: Dict[str, str],
 ) -> None:
+    """Attach logo URLs to both dict audit rows and StandingRow dataclasses."""
     for row in rows:
-        team_name = str(row.get("team_name") or "")
-        row["logo_url"] = team_logos_by_name.get(team_name, "")
+        if isinstance(row, dict):
+            team_name = str(row.get("team_name") or "")
+            row["logo_url"] = team_logos_by_name.get(team_name, "")
+        else:
+            team_name = str(getattr(row, "team_name", "") or "")
+            setattr(row, "logo_url", team_logos_by_name.get(team_name, ""))
 
 
 @live_dashboard_router.get("/", response_class=HTMLResponse)

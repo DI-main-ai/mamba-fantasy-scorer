@@ -6,7 +6,14 @@ from fastapi import HTTPException, Request
 
 from app.scoring import calculate_weekly_mamba_points
 from app.yahoo_auth import _fantasy_get
-from app.yahoo_mamba import _extract_matchups, _extract_unique_teams, _league_metadata
+from app.yahoo_mamba import (
+    _extract_matchups,
+    _extract_unique_teams,
+    _first_value_for_key,
+    _league_metadata,
+    _scalar_map,
+    _walk_values_for_key,
+)
 from app.yahoo_seasons import discover_mamba_seasons
 
 
@@ -59,11 +66,29 @@ def _resolve_season_record(request: Request, season: int) -> Dict[str, Any]:
     return dict(selected)
 
 
+def _extract_team_logo_urls(payload: Dict[str, Any]) -> Dict[str, str]:
+    """Extract Yahoo's team logo URL for each team key from a teams payload."""
+    logos: Dict[str, str] = {}
+    for team_resource in _walk_values_for_key(payload, "team"):
+        fields = _scalar_map(team_resource)
+        team_key = fields.get("team_key")
+        if not team_key:
+            continue
+
+        logos_node = _first_value_for_key(team_resource, "team_logos")
+        logo_url = _first_value_for_key(logos_node, "url")
+        if isinstance(logo_url, str) and logo_url.startswith(("https://", "http://")):
+            logos[str(team_key)] = logo_url
+    return logos
+
+
 def _normalize_matchups(
     raw_matchups: List[Dict[str, Any]],
     team_names_by_key: Dict[str, str],
+    team_logos_by_key: Optional[Dict[str, str]] = None,
 ) -> List[Dict[str, Any]]:
     normalized: List[Dict[str, Any]] = []
+    team_logos_by_key = team_logos_by_key or {}
     for matchup in raw_matchups:
         teams: List[Dict[str, Any]] = []
         for team in matchup.get("teams", []):
@@ -71,6 +96,8 @@ def _normalize_matchups(
             normalized_team = dict(team)
             if key in team_names_by_key:
                 normalized_team["name"] = team_names_by_key[key]
+            if key in team_logos_by_key:
+                normalized_team["logo_url"] = team_logos_by_key[key]
             teams.append(normalized_team)
         if len(teams) >= 2:
             normalized.append({**matchup, "teams": teams[:2]})
@@ -180,6 +207,12 @@ def load_yahoo_dashboard_data(
 
     teams_payload = _fantasy_get(request, f"league/{encoded_key}/teams")
     teams = _extract_unique_teams(teams_payload)
+    team_logos_by_key = _extract_team_logo_urls(teams_payload)
+    for team in teams:
+        team_key = str(team.get("team_key") or "")
+        if team_key in team_logos_by_key:
+            team["logo_url"] = team_logos_by_key[team_key]
+
     team_names_by_key = {
         str(team["team_key"]): str(team["name"])
         for team in teams
@@ -223,7 +256,9 @@ def load_yahoo_dashboard_data(
             request, f"league/{encoded_key}/scoreboard;week={selected_week}"
         )
         matchups = _normalize_matchups(
-            _extract_matchups(scoreboard_payload), team_names_by_key
+            _extract_matchups(scoreboard_payload),
+            team_names_by_key,
+            team_logos_by_key,
         )
         return {
             "mode": "matchups",
@@ -255,7 +290,9 @@ def load_yahoo_dashboard_data(
             request, f"league/{encoded_key}/scoreboard;week={week_number}"
         )
         matchups = _normalize_matchups(
-            _extract_matchups(scoreboard_payload), team_names_by_key
+            _extract_matchups(scoreboard_payload),
+            team_names_by_key,
+            team_logos_by_key,
         )
         if week_number == selected_week:
             selected_week_matchups = matchups

@@ -15,6 +15,7 @@
     <link rel="stylesheet" href="{{ url_for('static', path='css/audit-scroll.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', path='css/team-logos.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', path='css/matchup-detail.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', path='css/scoring-log.css') }}">
 </head>
 <body>
     <header class="site-header">
@@ -25,7 +26,11 @@
             </a>
             <div class="header-status-block">
                 <div class="season-status"><span class="season-label">{{ season }} Season</span><span class="status-divider"></span><span class="week-label">Week {{ current_week }}</span></div>
-                {% if yahoo_source and yahoo_refresh_epoch %}
+                {% if scoring_log_header %}
+                <div id="scoring-log-refresh-status" class="yahoo-refresh-status {% if scoring_log_active %}is-live{% endif %} {% if scoring_log_error %}is-stale{% endif %}">
+                    <span class="yahoo-refresh-dot" aria-hidden="true"></span><span class="yahoo-refresh-mode">{% if scoring_log_active and not scoring_log_error %}LIVE LOG{% else %}Scoring Log{% endif %}</span><span class="yahoo-refresh-time" id="scoring-log-refresh-time">{% if scoring_log_last_success %}Updated recently{% else %}Initializing collector{% endif %}</span>
+                </div>
+                {% elif yahoo_source and yahoo_refresh_epoch %}
                 <div id="yahoo-refresh-status" class="yahoo-refresh-status {% if yahoo_refresh_stale %}is-stale{% endif %}" data-season="{{ season }}" data-current-week="{{ current_week }}" data-requested-week="{% if live_refresh_requested_week is not none %}{{ live_refresh_requested_week }}{% endif %}" data-live-enabled="{% if live_refresh_enabled %}1{% else %}0{% endif %}" data-version="{{ yahoo_data_version }}" data-refreshed-at="{{ yahoo_refresh_epoch }}" data-refresh-seconds="{{ yahoo_refresh_interval_seconds }}" data-stale="{% if yahoo_refresh_stale %}1{% else %}0{% endif %}">
                     <span class="yahoo-refresh-dot" aria-hidden="true"></span><span class="yahoo-refresh-mode">Yahoo</span><span class="yahoo-refresh-time" id="yahoo-refresh-time">Updated recently</span>
                 </div>
@@ -54,6 +59,7 @@
                         <a class="section-jump-link" href="#yahoo-breakdown">Yahoo Standings</a>
                         {% endif %}
                         <a class="section-jump-link is-active" href="#weekly-matchups">Matchups</a>
+                        <a class="section-jump-link" href="/scoring-log?season={{ season }}&week={{ current_week }}">Live Log</a>
                     </nav>
                 </div>
                 <div class="week-pill">Week {{ current_week }}</div>

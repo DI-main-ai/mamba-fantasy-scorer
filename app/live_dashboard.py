@@ -87,6 +87,11 @@ def live_dashboard_home(
             else 13
         )
     )
+    team_logos_by_name = {
+        str(team.get("name") or ""): str(team.get("logo_url") or "")
+        for team in data.get("teams", [])
+        if team.get("name")
+    }
 
     common_context = {
         "request": request,
@@ -111,6 +116,7 @@ def live_dashboard_home(
         "live_refresh_requested_week": week,
         "hybrid_scoring_enabled": hybrid_scoring_enabled,
         "standings_end_week": standings_end_week,
+        "team_logos_by_name": team_logos_by_name,
     }
 
     if data["mode"] == "matchups":

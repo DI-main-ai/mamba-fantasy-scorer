@@ -13,6 +13,7 @@
     <a class="section-jump-link {% if active == 'points' %}is-active{% endif %}" href="#points-breakdown">Points For</a>
     <a class="section-jump-link {% if active == 'mamba' %}is-active{% endif %}" href="#mamba-breakdown">Mamba Points</a>
     <a class="section-jump-link {% if active == 'matchups' %}is-active{% endif %}" href="#weekly-matchups">Matchups</a>
+    <a class="section-jump-link" href="/scoring-log?season={{ season }}&week={{ current_week }}">Live Log</a>
 </nav>
 {% endmacro %}
 
@@ -52,6 +53,7 @@
                 <a class="dashboard-button" href="#points-breakdown">Points For</a>
                 <a class="dashboard-button" href="#mamba-breakdown">Mamba Points</a>
                 <a class="dashboard-button" href="#weekly-matchups">Matchups</a>
+                <a class="dashboard-button" href="/scoring-log?season={{ season }}&week={{ current_week }}">Live Log</a>
             </div>
             <span class="updated-label">Through Week {{ current_week }}</span>
         </div>

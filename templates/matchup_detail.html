@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+
+{% block title %}{{ page_title }}{% endblock %}
+
+{% block content %}
+<section class="matchup-detail-shell">
+    <a class="matchup-detail-back" href="{{ back_url }}">← Back to Week {{ current_week }} matchups</a>
+
+    <div class="matchup-detail-heading">
+        <p class="section-kicker section-kicker-gold">Yahoo Lineup Breakdown</p>
+        <h1>Week {{ current_week }} Matchup</h1>
+        <p>Starter and bench fantasy points from Yahoo for this head-to-head matchup.</p>
+    </div>
+
+    <div class="matchup-lineup-grid">
+        {% for team in teams %}
+        <article class="lineup-card">
+            <div class="lineup-team-header {% if team.is_winner %}is-winner{% endif %}">
+                <div class="lineup-team-title">
+                    {% if team.logo_url %}
+                    <img class="lineup-team-logo" src="{{ team.logo_url }}" alt="{{ team.name }} logo">
+                    {% endif %}
+                    <div class="lineup-team-name">{{ team.name }}</div>
+                </div>
+                <div class="lineup-team-score">
+                    {% if team.score is not none %}{{ "%.2f" | format(team.score) }}{% else %}—{% endif %}
+                </div>
+            </div>
+
+            <div class="lineup-section-label">Starters</div>
+            {% for player in team.starters %}
+            <div class="player-row">
+                <div class="player-slot">{{ player.selected_position }}</div>
+                <div class="player-info">
+                    <div class="player-name">{{ player.name }}</div>
+                    <div class="player-meta">
+                        {% if player.nfl_team %}{{ player.nfl_team }}{% endif %}
+                        {% if player.display_position %}{% if player.nfl_team %} · {% endif %}{{ player.display_position }}{% endif %}
+                    </div>
+                </div>
+                <div class="player-points">
+                    {% if player.points is not none %}{{ "%.2f" | format(player.points) }}{% else %}—{% endif %}
+                </div>
+            </div>
+            {% else %}
+            <div class="lineup-empty">Yahoo did not return a starting lineup for this week.</div>
+            {% endfor %}
+
+            {% if team.bench %}
+            <details class="bench-block">
+                <summary>Bench / IR ({{ team.bench | length }})</summary>
+                {% for player in team.bench %}
+                <div class="player-row">
+                    <div class="player-slot">{{ player.selected_position }}</div>
+                    <div class="player-info">
+                        <div class="player-name">{{ player.name }}</div>
+                        <div class="player-meta">
+                            {% if player.nfl_team %}{{ player.nfl_team }}{% endif %}
+                            {% if player.display_position %}{% if player.nfl_team %} · {% endif %}{{ player.display_position }}{% endif %}
+                        </div>
+                    </div>
+                    <div class="player-points">
+                        {% if player.points is not none %}{{ "%.2f" | format(player.points) }}{% else %}—{% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            </details>
+            {% endif %}
+        </article>
+        {% endfor %}
+    </div>
+</section>
+{% endblock %}

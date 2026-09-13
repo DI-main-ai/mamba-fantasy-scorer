@@ -12,6 +12,7 @@ from app.yahoo_history import history_router
 from app.yahoo_legacy_candidates import legacy_candidate_router
 from app.yahoo_live_status import live_status_router
 from app.yahoo_mamba import mamba_yahoo_router
+from app.yahoo_matchup_detail import matchup_detail_router
 from app.yahoo_seasons import season_router
 from app.yahoo_shared_auth import (
     install_shared_yahoo_auth,
@@ -48,6 +49,7 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 # is handled by the Yahoo-aware season router while the original function can
 # still be called internally as the validated 2025 regression baseline.
 app.include_router(live_dashboard_router)
+app.include_router(matchup_detail_router)
 app.include_router(router)
 app.include_router(yahoo_router)
 app.include_router(storage_status_router)

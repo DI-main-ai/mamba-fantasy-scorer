@@ -47,7 +47,7 @@
             {% endfor %}
 
             {% if team.bench %}
-            <details class="bench-block">
+            <details class="bench-block" data-bench-index="{{ loop.index0 }}">
                 <summary>Bench / IR ({{ team.bench | length }})</summary>
                 {% for player in team.bench %}
                 <div class="player-row">
@@ -70,4 +70,49 @@
         {% endfor %}
     </div>
 </section>
+
+{% if matchup_auto_refresh_enabled %}
+<script>
+(function () {
+    const refreshSeconds = Math.max(30, Number({{ matchup_refresh_seconds | int }}));
+    const stateKey = 'mamba-matchup-detail-state:' + window.location.search;
+
+    function saveState() {
+        const openBench = Array.from(document.querySelectorAll('.bench-block'))
+            .map((node, index) => node.open ? index : null)
+            .filter((index) => index !== null);
+        sessionStorage.setItem(stateKey, JSON.stringify({
+            scrollY: window.scrollY,
+            openBench: openBench
+        }));
+    }
+
+    function restoreState() {
+        try {
+            const raw = sessionStorage.getItem(stateKey);
+            if (!raw) return;
+            const state = JSON.parse(raw);
+            const openBench = Array.isArray(state.openBench) ? state.openBench : [];
+            document.querySelectorAll('.bench-block').forEach((node, index) => {
+                node.open = openBench.includes(index);
+            });
+            if (Number.isFinite(Number(state.scrollY))) {
+                window.scrollTo(0, Number(state.scrollY));
+            }
+        } catch (error) {
+            sessionStorage.removeItem(stateKey);
+        }
+    }
+
+    restoreState();
+
+    window.setTimeout(function () {
+        saveState();
+        window.location.reload();
+    }, refreshSeconds * 1000);
+
+    window.addEventListener('pagehide', saveState);
+})();
+</script>
+{% endif %}
 {% endblock %}

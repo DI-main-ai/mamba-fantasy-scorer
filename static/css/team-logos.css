@@ -42,6 +42,36 @@
 }
 
 @media (max-width: 620px) {
+    :root {
+        --hybrid-team-width: 170px;
+        --audit-team-width: 196px;
+    }
+
+    /* style.css historically hid team avatars on phones to save space.
+       The Yahoo logos are now useful data, so explicitly restore them here. */
+    .team-avatar {
+        display: grid;
+        width: 28px;
+        height: 28px;
+        flex: 0 0 28px;
+        border-radius: 8px;
+    }
+
+    .audit-avatar {
+        width: 26px;
+        height: 26px;
+        flex-basis: 26px;
+        border-radius: 8px;
+    }
+
+    .team-cell-content {
+        gap: 7px;
+    }
+
+    .team-name {
+        max-width: 118px;
+    }
+
     .matchup-team-logo {
         width: 28px;
         height: 28px;

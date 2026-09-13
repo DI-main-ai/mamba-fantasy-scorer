@@ -25,6 +25,17 @@
     {% endif %}
 {% endmacro %}
 
+{% macro team_avatar(name) %}
+    {% set logo = team_logos_by_name.get(name, '') if team_logos_by_name else '' %}
+    <div class="team-avatar audit-avatar">
+        {% if logo %}
+        <img class="team-logo-image" src="{{ logo }}" alt="{{ name }} logo" loading="lazy">
+        {% else %}
+        <span class="team-logo-fallback">{{ name[0] }}</span>
+        {% endif %}
+    </div>
+{% endmacro %}
+
 <section class="hero">
     <div class="hero-glow hero-glow-purple"></div>
     <div class="hero-glow hero-glow-gold"></div>
@@ -84,7 +95,7 @@
                         <td class="audit-team-sticky">
                             <div class="team-cell-content">
                                 <span class="inline-rank">{{ team.rank }}</span>
-                                <div class="team-avatar audit-avatar">{{ team.team_name[0] }}</div>
+                                {{ team_avatar(team.team_name) }}
                                 <div class="team-information">
                                     <div class="team-name-line">
                                         <span class="team-name">{{ team.team_name }}</span>

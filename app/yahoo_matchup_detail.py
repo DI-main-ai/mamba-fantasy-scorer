@@ -1,5 +1,6 @@
 import hashlib
 import json
+import time
 import urllib.parse
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
@@ -20,7 +21,10 @@ from app.yahoo_shared_auth import _upstash_command, _upstash_config
 
 matchup_detail_router = APIRouter(tags=["yahoo-matchup-detail"])
 
-DETAIL_CACHE_PREFIX = "mamba:yahoo:matchup-detail:v1"
+DETAIL_CACHE_PREFIX = "mamba:yahoo:matchup-detail:v2"
+LIVE_DETAIL_REFRESH_SECONDS = 45
+IDLE_DETAIL_REFRESH_SECONDS = 300
+HISTORICAL_DETAIL_CACHE_SECONDS = 604800
 STARTER_POSITION_ORDER = {
     "QB": 10,
     "RB": 20,
@@ -129,11 +133,13 @@ def _read_detail_cache(key: str) -> Optional[Dict[str, Any]]:
         return None
 
 
-def _write_detail_cache(key: str, value: Dict[str, Any], season: int) -> None:
+def _write_detail_cache(
+    key: str,
+    value: Dict[str, Any],
+    ttl_seconds: int,
+) -> None:
     if _upstash_config() is None:
         return
-    current_year = datetime.now(timezone.utc).year
-    ttl_seconds = 60 if int(season) == current_year else 604800
     try:
         _upstash_command(
             [
@@ -141,7 +147,7 @@ def _write_detail_cache(key: str, value: Dict[str, Any], season: int) -> None:
                 key,
                 json.dumps(value, separators=(",", ":"), default=str),
                 "EX",
-                ttl_seconds,
+                max(30, int(ttl_seconds)),
             ]
         )
     except Exception as exc:
@@ -226,6 +232,28 @@ def matchup_detail(
     if len(teams) != 2:
         raise HTTPException(status_code=404, detail="Yahoo did not return both matchup teams.")
 
+    refresh_meta = dashboard.get("_refresh_meta", {})
+    dashboard_refresh_seconds = int(
+        refresh_meta.get("refresh_interval_seconds") or IDLE_DETAIL_REFRESH_SECONDS
+    )
+    current_year = datetime.now(timezone.utc).year
+    latest_data_week = int(dashboard.get("maximum_week") or week)
+    is_current_latest_week = int(season) == current_year and int(week) == latest_data_week
+    is_live_scoring = is_current_latest_week and dashboard_refresh_seconds <= 60
+    matchup_refresh_seconds = (
+        LIVE_DETAIL_REFRESH_SECONDS if is_live_scoring else IDLE_DETAIL_REFRESH_SECONDS
+    )
+    matchup_auto_refresh_enabled = is_current_latest_week
+
+    # Expire current-week player detail shortly before the page's next refresh so
+    # a reload gets fresh Yahoo player points. Historical matchup details remain
+    # heavily cached because those values no longer change.
+    detail_cache_ttl = (
+        max(30, matchup_refresh_seconds - 5)
+        if matchup_auto_refresh_enabled
+        else HISTORICAL_DETAIL_CACHE_SECONDS
+    )
+
     league_key = str(dashboard.get("league_key") or "")
     detail_key = _cache_key(
         season,
@@ -234,17 +262,23 @@ def matchup_detail(
     )
     cached = _read_detail_cache(detail_key)
 
+    detail_refreshed_at = 0.0
     if cached:
         team_details = cached.get("teams", [])
+        detail_refreshed_at = float(cached.get("refreshed_at") or 0)
     else:
         team_details = [
             _load_team_roster(request, league_key, team, week)
             for team in teams
         ]
+        detail_refreshed_at = time.time()
         _write_detail_cache(
             detail_key,
-            {"teams": team_details},
-            season,
+            {
+                "teams": team_details,
+                "refreshed_at": detail_refreshed_at,
+            },
+            detail_cache_ttl,
         )
 
     winner_team_key = str(selected_matchup.get("winner_team_key") or "")
@@ -261,11 +295,18 @@ def matchup_detail(
             "season": season,
             "current_week": week,
             "yahoo_source": True,
-            "yahoo_refresh_epoch": 0,
-            "live_refresh_enabled": False,
+            "yahoo_refresh_epoch": detail_refreshed_at,
+            "yahoo_data_version": str(refresh_meta.get("signature") or ""),
+            "yahoo_refresh_interval_seconds": matchup_refresh_seconds,
+            "yahoo_refresh_stale": bool(refresh_meta.get("stale")),
+            "yahoo_refresh_error": refresh_meta.get("error"),
+            "live_refresh_enabled": is_live_scoring,
+            "live_refresh_requested_week": week,
             "league_name": dashboard.get("league_name") or "The Mamba League",
             "teams": team_details,
             "matchup_status": str(selected_matchup.get("status") or ""),
+            "matchup_auto_refresh_enabled": matchup_auto_refresh_enabled,
+            "matchup_refresh_seconds": matchup_refresh_seconds,
             "back_url": f"/?season={season}&week={week}#weekly-matchups",
         },
     )

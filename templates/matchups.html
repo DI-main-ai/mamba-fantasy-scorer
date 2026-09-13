@@ -69,6 +69,7 @@
                 {% else %}
                 The cumulative Yahoo standings view ends at Week {{ cutoff_week }}.
                 {% endif %}
+                Tap View Players to see both Yahoo lineups and individual player points.
             </p>
         </div>
 
@@ -85,6 +86,7 @@
                         <th>Score</th>
                         <th>Opponent</th>
                         <th>Score</th>
+                        <th>Players</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -94,23 +96,36 @@
                         <tr>
                             <td>{{ loop.index }}</td>
                             <td>
-                                {{ first.name }}
-                                {% if matchup.winner_team_key == first.team_key %} ✓{% endif %}
+                                <span class="matchup-table-team">
+                                    {% if first.logo_url %}<img class="matchup-team-logo" src="{{ first.logo_url }}" alt="{{ first.name }} logo" loading="lazy">{% endif %}
+                                    <span>
+                                        {{ first.name }}
+                                        {% if matchup.winner_team_key == first.team_key %} ✓{% endif %}
+                                    </span>
+                                </span>
                             </td>
                             <td class="strong-value">
                                 {% if first.score is not none %}{{ "%.2f" | format(first.score) }}{% else %}—{% endif %}
                             </td>
                             <td>
-                                {{ second.name }}
-                                {% if matchup.winner_team_key == second.team_key %} ✓{% endif %}
+                                <span class="matchup-table-team">
+                                    {% if second.logo_url %}<img class="matchup-team-logo" src="{{ second.logo_url }}" alt="{{ second.name }} logo" loading="lazy">{% endif %}
+                                    <span>
+                                        {{ second.name }}
+                                        {% if matchup.winner_team_key == second.team_key %} ✓{% endif %}
+                                    </span>
+                                </span>
                             </td>
                             <td class="strong-value">
                                 {% if second.score is not none %}{{ "%.2f" | format(second.score) }}{% else %}—{% endif %}
                             </td>
+                            <td>
+                                <a class="matchup-detail-link" href="/matchup?season={{ season }}&week={{ current_week }}&matchup={{ loop.index0 }}">View Players</a>
+                            </td>
                         </tr>
                     {% else %}
                         <tr>
-                            <td colspan="5">Yahoo has not returned matchup data for this week yet.</td>
+                            <td colspan="6">Yahoo has not returned matchup data for this week yet.</td>
                         </tr>
                     {% endfor %}
                 </tbody>

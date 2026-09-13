@@ -1,0 +1,210 @@
+{% extends "base.html" %}
+
+{% block title %}{{ page_title }}{% endblock %}
+
+{% block content %}
+<section class="scoring-log-shell">
+    <a class="scoring-log-back" href="/?season={{ season }}&week={{ current_week }}">← Back to Week {{ current_week }} dashboard</a>
+
+    <div class="scoring-log-hero">
+        <p class="section-kicker section-kicker-gold">Live Scoring</p>
+        <h1>Week {{ current_week }} <span>Scoring Log</span></h1>
+        <p class="scoring-log-hero-copy">
+            Every Yahoo starter-point change detected by Mamba, newest first. The timestamp is when Mamba detected Yahoo's updated total, not necessarily the exact time of the NFL play.
+        </p>
+        <div class="scoring-log-meta">
+            <span class="scoring-log-meta-pill {% if is_current_log and scoring_log_active %}is-live{% endif %}">
+                {% if is_current_log and scoring_log_active %}Live tracking{% elif is_current_log %}Current week{% else %}Archived week{% endif %}
+            </span>
+            <span class="scoring-log-meta-pill">{{ event_count }} event{% if event_count != 1 %}s{% endif %}</span>
+            {% if tracking_started_label %}<span class="scoring-log-meta-pill">Tracking since {{ tracking_started_label }}</span>{% endif %}
+        </div>
+    </div>
+
+    <form class="scoring-log-controls" method="get" action="/scoring-log">
+        <input type="hidden" name="season" value="{{ season }}">
+
+        <div class="scoring-filter">
+            <label for="log-week">Week</label>
+            <select id="log-week" name="week" onchange="this.form.submit()">
+                {% if logged_weeks %}
+                    {% for week_number in logged_weeks %}
+                    <option value="{{ week_number }}" {% if week_number == current_week %}selected{% endif %}>Week {{ week_number }}</option>
+                    {% endfor %}
+                {% else %}
+                    <option value="{{ current_week }}" selected>Week {{ current_week }}</option>
+                {% endif %}
+            </select>
+        </div>
+
+        <div class="scoring-filter">
+            <label for="log-team">Team</label>
+            <select id="log-team" name="team" onchange="this.form.submit()">
+                <option value="">All teams</option>
+                {% for team in teams %}
+                <option value="{{ team.team_key }}" {% if selected_team == team.team_key %}selected{% endif %}>{{ team.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="scoring-filter">
+            <label for="log-matchup">Matchup</label>
+            <select id="log-matchup" name="matchup" onchange="this.form.submit()">
+                <option value="">All matchups</option>
+                {% for option in matchup_options %}
+                <option value="{{ option.index }}" {% if selected_matchup is not none and selected_matchup == option.index %}selected{% endif %}>{{ option.label }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="scoring-filter">
+            <label for="log-order">Order</label>
+            <select id="log-order" name="order" onchange="this.form.submit()">
+                <option value="newest" {% if selected_order == 'newest' %}selected{% endif %}>Newest first</option>
+                <option value="oldest" {% if selected_order == 'oldest' %}selected{% endif %}>Oldest first</option>
+            </select>
+        </div>
+    </form>
+
+    <div class="scoring-log-list">
+        {% for event in events %}
+        <article class="scoring-event">
+            <div class="scoring-event-time">{{ event.time_label }}</div>
+
+            <div class="scoring-player">
+                <div class="scoring-player-name">{{ event.player_name }}</div>
+                <div class="scoring-player-meta">
+                    {% if event.nfl_team %}{{ event.nfl_team }}{% endif %}
+                    {% if event.selected_position %}{% if event.nfl_team %} · {% endif %}{{ event.selected_position }}{% endif %}
+                </div>
+                {% if event.event_type == 'imported' %}<span class="scoring-import-note">Pre-tracking total</span>{% endif %}
+            </div>
+
+            <div class="scoring-team">
+                {% if event.team_logo_url %}
+                <img class="scoring-team-logo" src="{{ event.team_logo_url }}" alt="{{ event.team_name }} logo" loading="lazy">
+                {% else %}
+                <span class="scoring-team-logo-fallback">{{ event.team_name[0] if event.team_name else '?' }}</span>
+                {% endif %}
+                <span class="scoring-team-name">{{ event.team_name }}</span>
+            </div>
+
+            <div class="scoring-change {% if event.event_type == 'imported' %}is-imported{% elif event.delta > 0 %}is-positive{% elif event.delta < 0 %}is-negative{% endif %}">
+                {{ event.delta_label }}
+            </div>
+
+            <div class="scoring-total">
+                <span class="scoring-total-label">New total</span>
+                {{ event.new_total_label }}
+            </div>
+        </article>
+        {% else %}
+        <div class="scoring-log-empty">
+            <strong>No scoring events recorded for this view yet.</strong>
+            {% if is_current_log %}
+            Mamba is waiting for Yahoo starter points to change. Existing points from games played before tracking began will appear as pre-tracking totals after the first baseline completes.
+            {% else %}
+            This week does not have a stored Mamba scoring timeline.
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+</section>
+
+{% if is_current_log %}
+<script>
+(function () {
+    const status = document.getElementById('scoring-log-refresh-status');
+    const timeLabel = document.getElementById('scoring-log-refresh-time');
+    const modeLabel = status ? status.querySelector('.yahoo-refresh-mode') : null;
+    const stateKey = 'mamba-scoring-log-scroll:' + window.location.search;
+    const season = Number({{ season | int }});
+    const week = Number({{ current_week | int }});
+    const pollSeconds = Math.max(10, Number({{ scoring_log_poll_seconds | int }}));
+    let version = Number({{ scoring_log_version | int }});
+    let refreshedAt = Number({{ scoring_log_last_success or 0 }});
+    let stale = {{ 'true' if scoring_log_error else 'false' }};
+    let active = {{ 'true' if scoring_log_active else 'false' }};
+
+    function clock(epoch) {
+        if (!epoch) return 'waiting for first snapshot';
+        return new Date(epoch * 1000).toLocaleTimeString([], {
+            hour: 'numeric', minute: '2-digit', second: '2-digit'
+        });
+    }
+
+    function age(epoch) {
+        if (!epoch) return '';
+        const seconds = Math.max(0, Math.round(Date.now() / 1000 - epoch));
+        if (seconds < 10) return 'just now';
+        if (seconds < 60) return seconds + 's ago';
+        const minutes = Math.floor(seconds / 60);
+        if (minutes < 60) return minutes + 'm ago';
+        return Math.floor(minutes / 60) + 'h ago';
+    }
+
+    function render() {
+        if (!status) return;
+        status.classList.toggle('is-live', active && !stale);
+        status.classList.toggle('is-stale', stale);
+        if (modeLabel) modeLabel.textContent = active && !stale ? 'LIVE LOG' : 'Scoring Log';
+        if (!timeLabel) return;
+        if (stale) {
+            timeLabel.textContent = 'Collector delayed · last good update ' + clock(refreshedAt);
+        } else if (!refreshedAt) {
+            timeLabel.textContent = 'Initializing collector';
+        } else {
+            timeLabel.textContent = 'Updated ' + clock(refreshedAt) + ' · ' + age(refreshedAt);
+        }
+    }
+
+    function saveScroll() {
+        sessionStorage.setItem(stateKey, String(window.scrollY));
+    }
+
+    function restoreScroll() {
+        const saved = sessionStorage.getItem(stateKey);
+        if (saved === null) return;
+        sessionStorage.removeItem(stateKey);
+        const y = Number(saved);
+        if (Number.isFinite(y)) requestAnimationFrame(() => window.scrollTo(0, y));
+    }
+
+    async function poll() {
+        try {
+            const params = new URLSearchParams({season: String(season), week: String(week)});
+            const response = await fetch('/api/scoring-log/status?' + params.toString(), {
+                credentials: 'same-origin',
+                headers: {Accept: 'application/json'},
+                cache: 'no-store'
+            });
+            if (!response.ok) throw new Error('status request failed');
+            const payload = await response.json();
+            const nextVersion = Number(payload.version || 0);
+            refreshedAt = Number(payload.refreshed_at || refreshedAt || 0);
+            stale = Boolean(payload.stale);
+            active = Boolean(payload.active);
+            render();
+
+            if (nextVersion !== version) {
+                saveScroll();
+                window.location.reload();
+                return;
+            }
+            version = nextVersion;
+        } catch (error) {
+            stale = true;
+            render();
+        }
+        window.setTimeout(poll, pollSeconds * 1000);
+    }
+
+    restoreScroll();
+    render();
+    window.setInterval(render, 15000);
+    window.setTimeout(poll, pollSeconds * 1000);
+    window.addEventListener('pagehide', saveScroll);
+})();
+</script>
+{% endif %}
+{% endblock %}

@@ -6,6 +6,11 @@ from starlette.middleware.sessions import SessionMiddleware
 
 from app.live_dashboard import live_dashboard_router
 from app.routes import router
+from app.scoring_log import (
+    scoring_log_router,
+    start_scoring_log_collector,
+    stop_scoring_log_collector,
+)
 from app.week_selector import HistoricalWeekSelectorMiddleware
 from app.yahoo_auth import yahoo_router
 from app.yahoo_history import history_router
@@ -45,11 +50,25 @@ app.add_middleware(
 )
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
+
+@app.on_event("startup")
+async def _start_scoring_log() -> None:
+    # The collector persists player-point snapshots/events in Upstash so the
+    # scoring log survives page reloads, deploys, and ordinary service restarts.
+    start_scoring_log_collector()
+
+
+@app.on_event("shutdown")
+async def _stop_scoring_log() -> None:
+    await stop_scoring_log_collector()
+
+
 # Register the multi-season dashboard before the original 2025 route so "/"
 # is handled by the Yahoo-aware season router while the original function can
 # still be called internally as the validated 2025 regression baseline.
 app.include_router(live_dashboard_router)
 app.include_router(matchup_detail_router)
+app.include_router(scoring_log_router)
 app.include_router(router)
 app.include_router(yahoo_router)
 app.include_router(storage_status_router)

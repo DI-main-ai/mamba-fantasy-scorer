@@ -13,6 +13,7 @@
     <a class="section-jump-link {% if active == 'points' %}is-active{% endif %}" href="#points-breakdown">Points For</a>
     <a class="section-jump-link {% if active == 'mamba' %}is-active{% endif %}" href="#mamba-breakdown">Mamba Points</a>
     <a class="section-jump-link {% if active == 'matchups' %}is-active{% endif %}" href="#weekly-matchups">Matchups</a>
+    {% if show_trades_section %}<a class="section-jump-link" href="#trades">Trades</a>{% endif %}
     <a class="section-jump-link" href="/scoring-log?season={{ season }}&week={{ current_week }}">Live Log</a>
 </nav>
 {% endmacro %}

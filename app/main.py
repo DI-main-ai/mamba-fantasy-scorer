@@ -4,6 +4,7 @@ from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.sessions import SessionMiddleware
 
+from app.commish_debug import commish_debug_router
 from app.live_dashboard import live_dashboard_router
 from app.routes import router
 from app.scoring_log import (
@@ -72,6 +73,7 @@ async def _stop_background_collectors() -> None:
 app.include_router(live_dashboard_router)
 app.include_router(matchup_detail_router)
 app.include_router(scoring_log_router)
+app.include_router(commish_debug_router)
 app.include_router(router)
 app.include_router(yahoo_router)
 app.include_router(storage_status_router)

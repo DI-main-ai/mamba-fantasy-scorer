@@ -11,6 +11,7 @@ from app.scoring_log import (
     start_scoring_log_collector,
     stop_scoring_log_collector,
 )
+from app.trade_tracker import start_trade_tracker, stop_trade_tracker
 from app.week_selector import HistoricalWeekSelectorMiddleware
 from app.yahoo_auth import yahoo_router
 from app.yahoo_history import history_router
@@ -52,15 +53,17 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 
 
 @app.on_event("startup")
-async def _start_scoring_log() -> None:
-    # The collector persists player-point snapshots/events in Upstash so the
-    # scoring log survives page reloads, deploys, and ordinary service restarts.
+async def _start_background_collectors() -> None:
+    # Both collectors persist their state in Upstash so ordinary Render
+    # restarts/deploys do not erase the scoring log or FAAB-change history.
     start_scoring_log_collector()
+    start_trade_tracker()
 
 
 @app.on_event("shutdown")
-async def _stop_scoring_log() -> None:
+async def _stop_background_collectors() -> None:
     await stop_scoring_log_collector()
+    await stop_trade_tracker()
 
 
 # Register the multi-season dashboard before the original 2025 route so "/"

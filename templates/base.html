@@ -16,6 +16,7 @@
     <link rel="stylesheet" href="{{ url_for('static', path='css/team-logos.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', path='css/matchup-detail.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', path='css/scoring-log.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', path='css/trades.css') }}">
 </head>
 <body>
     <header class="site-header">
@@ -59,6 +60,7 @@
                         <a class="section-jump-link" href="#yahoo-breakdown">Yahoo Standings</a>
                         {% endif %}
                         <a class="section-jump-link is-active" href="#weekly-matchups">Matchups</a>
+                        {% if show_trades_section %}<a class="section-jump-link" href="#trades">Trades</a>{% endif %}
                         <a class="section-jump-link" href="/scoring-log?season={{ season }}&week={{ current_week }}">Live Log</a>
                     </nav>
                 </div>
@@ -86,6 +88,86 @@
                         <div class="matchup-card-action">View lineup &amp; player points →</div>
                     </a>
                 {% else %}<div class="standings-card matchup-empty">Yahoo has not returned matchup data for this week yet.</div>{% endfor %}
+            </div>
+        </section>
+        {% endif %}
+
+        {% if show_trades_section %}
+        <section id="trades" class="dashboard-section trades-section">
+            <div class="section-heading">
+                <div>
+                    <p class="section-kicker section-kicker-gold">League Activity</p>
+                    <h2>Trades</h2>
+                    <p class="section-description">Completed Yahoo trades for the {{ season }} season. When Mamba detects equal-and-opposite commissioner FAAB balance changes shortly after a trade between the same teams, the FAAB is folded into the trade itself.</p>
+                    <nav class="section-jump-nav" aria-label="Jump to another section">
+                        {% if hybrid_scoring_enabled %}
+                        <a class="section-jump-link" href="#hybrid-standings">Hybrid</a>
+                        <a class="section-jump-link" href="#yahoo-breakdown">Yahoo W/L</a>
+                        <a class="section-jump-link" href="#points-breakdown">Points For</a>
+                        <a class="section-jump-link" href="#mamba-breakdown">Mamba Points</a>
+                        {% else %}
+                        <a class="section-jump-link" href="#yahoo-breakdown">Yahoo Standings</a>
+                        {% endif %}
+                        {% if show_bottom_matchups %}<a class="section-jump-link" href="#weekly-matchups">Matchups</a>{% endif %}
+                        <a class="section-jump-link is-active" href="#trades">Trades</a>
+                        <a class="section-jump-link" href="/scoring-log?season={{ season }}&week={{ current_week }}">Live Log</a>
+                    </nav>
+                    <div class="trade-summary-row">
+                        <span class="trade-summary-pill"><strong>{{ trade_count }}</strong> trade{% if trade_count != 1 %}s{% endif %}</span>
+                        {% if trade_faab_match_count %}<span class="trade-summary-pill"><strong>{{ trade_faab_match_count }}</strong> FAAB match{% if trade_faab_match_count != 1 %}es{% endif %}</span>{% endif %}
+                    </div>
+                    {% if trade_tracker_stale %}<div class="trade-tracker-warning">Yahoo trade tracking is temporarily stale; showing the most recent stored trade data.</div>{% endif %}
+                </div>
+            </div>
+
+            <div class="trade-grid">
+                {% for trade in trades %}
+                <article class="trade-card">
+                    <div class="trade-card-header">
+                        <span class="trade-card-label">Completed Trade</span>
+                        <span class="trade-card-time">{{ trade.time_label }}</span>
+                    </div>
+                    <div class="trade-sides">
+                        {% for side in trade.sides %}
+                        <div class="trade-side">
+                            <div class="trade-team-heading">
+                                {% if side.logo_url %}
+                                <img class="trade-team-logo" src="{{ side.logo_url }}" alt="{{ side.team_name }} logo" loading="lazy">
+                                {% else %}
+                                <span class="trade-team-logo-fallback">{{ side.team_name[0] if side.team_name else '?' }}</span>
+                                {% endif %}
+                                <div class="trade-team-copy">
+                                    <div class="trade-team-name">{{ side.team_name }}</div>
+                                    <div class="trade-sends-label">Sends</div>
+                                </div>
+                            </div>
+                            <div class="trade-assets">
+                                {% for player in side.players %}
+                                <div class="trade-asset">{{ player }}</div>
+                                {% endfor %}
+                                {% if side.faab_sent %}
+                                <div class="trade-asset trade-asset-faab">${{ "%.0f" | format(side.faab_sent) }} FAAB</div>
+                                {% endif %}
+                                {% if not side.players and not side.faab_sent %}
+                                <div class="trade-asset trade-asset-empty">Yahoo did not return an asset for this side.</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% if trade.faab_association %}
+                    <div class="trade-faab-match">
+                        <span><strong>Commissioner FAAB matched</strong> to this trade{% if trade.faab_minutes_after is not none %} · {{ trade.faab_minutes_after }} min after trade{% endif %}</span>
+                        <span class="trade-faab-confidence">same teams · equal/opposite balance change</span>
+                    </div>
+                    {% endif %}
+                </article>
+                {% else %}
+                <div class="trade-empty">
+                    <strong>No completed Yahoo trades found for {{ season }}.</strong>
+                    Trades will appear here automatically when Yahoo reports them. Commissioner FAAB matching starts from Mamba's first stored FAAB balance snapshot unless Yahoo exposes an explicit FAAB amount in the commissioner transaction itself.
+                </div>
+                {% endfor %}
             </div>
         </section>
         {% endif %}

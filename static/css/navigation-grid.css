@@ -1,0 +1,67 @@
+.section-jump-nav {
+    width: min(100%, 820px);
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    align-items: stretch;
+    gap: 8px;
+    overflow: visible;
+}
+
+.section-jump-link {
+    width: 100%;
+    min-width: 0;
+    min-height: 34px;
+    padding: 8px 10px;
+    text-align: center;
+    white-space: normal;
+    line-height: 1.15;
+}
+
+.hero-nav-buttons .dashboard-button:last-child:nth-child(odd) {
+    grid-column: 1 / -1;
+}
+
+@media (max-width: 850px) {
+    .section-jump-nav {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 620px) {
+    .section-heading {
+        flex-wrap: wrap;
+    }
+
+    .section-heading > div:first-child {
+        width: 100%;
+        min-width: 0;
+    }
+
+    .section-jump-nav {
+        width: 100%;
+        margin-top: 14px;
+        padding-bottom: 0;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 8px;
+        overflow: visible;
+    }
+
+    .section-jump-nav::-webkit-scrollbar {
+        display: initial;
+    }
+
+    .section-jump-link {
+        min-height: 36px;
+        padding: 9px 8px;
+        flex: initial;
+        font-size: 10px;
+    }
+
+    .section-jump-nav .section-jump-link:last-child:nth-child(odd) {
+        grid-column: 1 / -1;
+    }
+
+    .hero-nav-buttons .dashboard-button:last-child:nth-child(odd) {
+        grid-column: 1 / -1;
+    }
+}

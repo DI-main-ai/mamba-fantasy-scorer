@@ -21,9 +21,12 @@ TRACKER_LOCK_KEY = f"{TRADE_TRACKER_PREFIX}:collector-lock"
 CURRENT_STATUS_KEY = f"{TRADE_TRACKER_PREFIX}:current-status"
 CURRENT_SEASON_REFRESH_SECONDS = 60
 HISTORICAL_CACHE_SECONDS = 3600
-FAAB_MATCH_WINDOW_SECONDS = 60 * 60
+# A free Render service may sleep for hours. Keep enough room to associate the
+# equal/opposite FAAB balance change with the closest preceding trade between
+# the same two teams after the service wakes again.
+FAAB_MATCH_WINDOW_SECONDS = 7 * 24 * 60 * 60
 COMMISH_EVIDENCE_WINDOW_SECONDS = 12 * 60
-PENDING_CHANGE_TTL_SECONDS = 20 * 60
+PENDING_CHANGE_TTL_SECONDS = 24 * 60 * 60
 CENTRAL_TZ = ZoneInfo("America/Chicago")
 EPSILON = 0.0001
 
@@ -366,39 +369,16 @@ def _find_closest_prior_trade(
     return candidates[0][1]
 
 
-def _closest_commish_evidence(
-    commish: List[Dict[str, Any]],
-    detected_at: float,
-    seen_before: Iterable[str],
-) -> Optional[Dict[str, Any]]:
-    seen = set(seen_before)
-    candidates = []
-    for item in commish:
-        key = str(item.get("transaction_key") or "")
-        if not key or key in seen:
-            continue
-        timestamp = float(item.get("timestamp") or 0)
-        if not timestamp:
-            continue
-        distance = abs(timestamp - detected_at)
-        if distance <= COMMISH_EVIDENCE_WINDOW_SECONDS:
-            candidates.append((distance, item))
-    if not candidates:
-        return None
-    candidates.sort(key=lambda item: item[0])
-    return candidates[0][1]
-
-
 def _backfill_direct_commish_associations(
     trades: List[Dict[str, Any]],
     commish: List[Dict[str, Any]],
     associations: Dict[str, Dict[str, Any]],
 ) -> None:
-    """Use any explicit FAAB move Yahoo happens to include in a commish record.
+    """Use an explicit FAAB move only if Yahoo ever includes one directly.
 
-    Yahoo documents commish transactions but does not promise a dedicated manual
-    FAAB-transfer schema. This conservative path only backfills when a commish
-    record itself contains an amount plus unambiguous source/destination teams.
+    Manual FAAB edits in this league are not emitted as Yahoo commissioner
+    transactions, but keeping this conservative fallback costs nothing and can
+    support leagues where Yahoo exposes richer transaction fields.
     """
     for item in commish:
         source = str(item.get("source_team_key") or "")
@@ -436,7 +416,6 @@ def _update_faab_tracking(
 
     previous = _read_json(_snapshot_key(season)) or {}
     previous_balances = previous.get("balances") if isinstance(previous.get("balances"), dict) else {}
-    seen_commish = previous.get("seen_commish_keys") if isinstance(previous.get("seen_commish_keys"), list) else []
     pending = previous.get("pending_changes") if isinstance(previous.get("pending_changes"), list) else []
 
     current_balances = {
@@ -455,7 +434,6 @@ def _update_faab_tracking(
             delta = float(new_balance) - float(old_balance)
             if abs(delta) <= EPSILON:
                 continue
-            evidence = _closest_commish_evidence(commish, now_epoch, seen_commish)
             pending.append(
                 {
                     "team_key": team_key,
@@ -463,12 +441,6 @@ def _update_faab_tracking(
                     "before": old_balance,
                     "after": float(new_balance),
                     "detected_at": now_epoch,
-                    "commish_transaction_key": (
-                        evidence.get("transaction_key") if evidence else None
-                    ),
-                    "commish_timestamp": (
-                        float(evidence.get("timestamp") or 0) if evidence else 0
-                    ),
                 }
             )
 
@@ -499,20 +471,9 @@ def _update_faab_tracking(
             if not left_team or not right_team or left_team == right_team:
                 continue
 
-            commish_keys = [
-                str(value)
-                for value in (
-                    left.get("commish_transaction_key"),
-                    right.get("commish_transaction_key"),
-                )
-                if value
-            ]
-            if not commish_keys:
-                continue
-
             event_time = max(
-                float(left.get("commish_timestamp") or left.get("detected_at") or 0),
-                float(right.get("commish_timestamp") or right.get("detected_at") or 0),
+                float(left.get("detected_at") or 0),
+                float(right.get("detected_at") or 0),
             )
             trade = _find_closest_prior_trade(
                 trades, left_team, right_team, event_time or now_epoch
@@ -530,7 +491,7 @@ def _update_faab_tracking(
                     "amount": amount,
                     "sender_team_key": sender,
                     "receiver_team_key": receiver,
-                    "commish_transaction_keys": list(dict.fromkeys(commish_keys)),
+                    "commish_transaction_keys": [],
                     "detected_at": event_time or now_epoch,
                     "match_method": "equal_opposite_balance_delta",
                 }

@@ -96,6 +96,16 @@ def _format_time(epoch: Any) -> str:
     return datetime.fromtimestamp(value, tz=CENTRAL_TZ).strftime("%b %-d, %-I:%M:%S %p")
 
 
+def _date_for_epoch(epoch: Any) -> str:
+    try:
+        value = float(epoch)
+    except (TypeError, ValueError):
+        return ""
+    if value <= 0:
+        return ""
+    return datetime.fromtimestamp(value, tz=CENTRAL_TZ).strftime("%Y-%m-%d")
+
+
 def _current_league_key() -> str:
     league_key = os.getenv("YAHOO_LEAGUE_KEY", "").strip()
     if not league_key:
@@ -103,18 +113,32 @@ def _current_league_key() -> str:
     return league_key
 
 
-def _commish_resources(payload: Dict[str, Any]) -> List[Dict[str, Any]]:
+def _transaction_records(
+    payload: Dict[str, Any],
+    *,
+    transaction_type: str | None = None,
+    date_filter: str | None = None,
+) -> List[Dict[str, Any]]:
     records: List[Dict[str, Any]] = []
     seen = set()
+    wanted_type = (transaction_type or "").lower().strip()
+
     for resource in _walk_values_for_key(payload, "transaction"):
         fields = _scalar_map(resource)
-        if str(fields.get("type") or "").lower() != "commish":
+        actual_type = str(fields.get("type") or "").lower()
+        if wanted_type and actual_type != wanted_type:
             continue
+
+        timestamp = fields.get("timestamp")
+        if date_filter and _date_for_epoch(timestamp) != date_filter:
+            continue
+
         key = str(fields.get("transaction_key") or fields.get("transaction_id") or "")
         if key and key in seen:
             continue
         if key:
             seen.add(key)
+
         scalar_paths = _collect_scalar_paths(resource)
         interesting = [
             (path, value)
@@ -125,29 +149,28 @@ def _commish_resources(payload: Dict[str, Any]) -> List[Dict[str, Any]]:
             {
                 "key": key or "Unknown transaction",
                 "transaction_id": fields.get("transaction_id"),
-                "timestamp": fields.get("timestamp"),
-                "time_label": _format_time(fields.get("timestamp")),
+                "timestamp": timestamp,
+                "time_label": _format_time(timestamp),
+                "type": actual_type or "unknown",
                 "status": fields.get("status"),
                 "interesting": interesting,
                 "all_scalars": scalar_paths,
                 "raw": _sanitize(resource),
             }
         )
+
     records.sort(key=lambda item: float(item.get("timestamp") or 0), reverse=True)
     return records
 
 
-@commish_debug_router.get("/debug/commish", response_class=HTMLResponse)
-@commish_debug_router.get("/debug/commish-transactions", response_class=HTMLResponse)
-def commish_transaction_debug(request: Request):
-    league_key = _current_league_key()
-    encoded_key = urllib.parse.quote(league_key, safe=".-_")
-    payload = _fantasy_get(
-        request,
-        f"league/{encoded_key}/transactions;types=commish;count=200",
-    )
-    records = _commish_resources(payload)
-
+def _render_debug_page(
+    *,
+    title_label: str,
+    intro: str,
+    warning: str,
+    records: List[Dict[str, Any]],
+    show_all_inline: bool,
+) -> HTMLResponse:
     cards: List[str] = []
     for index, record in enumerate(records, start=1):
         interesting_rows = "".join(
@@ -161,21 +184,25 @@ def commish_transaction_debug(request: Request):
         ) or '<tr><td colspan="2">No scalar fields found.</td></tr>'
 
         raw_json = html.escape(json.dumps(record["raw"], indent=2, ensure_ascii=False))
+        all_fields_html = (
+            f'<h3>Every scalar field</h3><div class="table-wrap"><table><tbody>{all_rows}</tbody></table></div>'
+            if show_all_inline
+            else f'<details><summary>Show every scalar field</summary><div class="table-wrap"><table><tbody>{all_rows}</tbody></table></div></details>'
+        )
+
         cards.append(
             f"""
             <section class="card">
-              <div class="card-number">Commissioner transaction {index}</div>
+              <div class="card-number">Transaction {index} · {html.escape(str(record['type']).upper())}</div>
               <h2>{html.escape(record['time_label'])}</h2>
               <div class="meta"><strong>Transaction key:</strong> {html.escape(str(record['key']))}</div>
+              <div class="meta"><strong>Type:</strong> {html.escape(str(record.get('type') or 'unknown'))}</div>
               <div class="meta"><strong>Status:</strong> {html.escape(str(record.get('status') or '—'))}</div>
 
               <h3>Likely useful fields</h3>
               <div class="table-wrap"><table><tbody>{interesting_rows}</tbody></table></div>
 
-              <details>
-                <summary>Show every scalar field</summary>
-                <div class="table-wrap"><table><tbody>{all_rows}</tbody></table></div>
-              </details>
+              {all_fields_html}
 
               <details>
                 <summary>Show sanitized raw Yahoo payload</summary>
@@ -189,8 +216,8 @@ def commish_transaction_debug(request: Request):
         cards.append(
             """
             <section class="card">
-              <h2>No commissioner transactions returned</h2>
-              <p>Yahoo returned zero transactions with type <code>commish</code> for the current league.</p>
+              <h2>No matching transactions returned</h2>
+              <p>Yahoo did not return any transactions matching this diagnostic view.</p>
             </section>
             """
         )
@@ -203,7 +230,7 @@ def commish_transaction_debug(request: Request):
         <head>
           <meta charset="utf-8">
           <meta name="viewport" content="width=device-width, initial-scale=1">
-          <title>Commissioner Transaction Debug - Mamba Fantasy</title>
+          <title>{html.escape(title_label)} - Mamba Fantasy</title>
           <style>
             :root {{ color-scheme: dark; }}
             * {{ box-sizing: border-box; }}
@@ -232,12 +259,65 @@ def commish_transaction_debug(request: Request):
         <body>
           <main>
             <a href="/">← Back to Mamba Fantasy</a>
-            <h1>Commissioner <span>Transaction Debug</span></h1>
-            <p class="intro">This temporary test page shows the commissioner transaction fields Yahoo is actually returning for your current league. OAuth credentials, GUIDs, and email-like fields are redacted.</p>
-            <div class="warning">Screenshot the “Likely useful fields” for the commissioner adjustments that you know were FAAB transfers. If needed, expand “Show every scalar field” for one of those transactions.</div>
+            <h1>{html.escape(title_label)}</h1>
+            <p class="intro">{html.escape(intro)}</p>
+            <div class="warning">{html.escape(warning)}</div>
             {body}
           </main>
         </body>
         </html>
         """
+    )
+
+
+@commish_debug_router.get("/debug/commish", response_class=HTMLResponse)
+@commish_debug_router.get("/debug/commish-transactions", response_class=HTMLResponse)
+def commish_transaction_debug(request: Request):
+    league_key = _current_league_key()
+    encoded_key = urllib.parse.quote(league_key, safe=".-_")
+    payload = _fantasy_get(
+        request,
+        f"league/{encoded_key}/transactions;types=commish;count=200",
+    )
+    records = _transaction_records(payload, transaction_type="commish")
+    return _render_debug_page(
+        title_label="Commissioner Transaction Debug",
+        intro=(
+            "This temporary test page shows commissioner transaction fields Yahoo "
+            "is actually returning for the current league. OAuth credentials, GUIDs, "
+            "and email-like fields are redacted."
+        ),
+        warning=(
+            "Use the newer Today Transactions page for the Sep 15 FAAB-trade test."
+        ),
+        records=records,
+        show_all_inline=False,
+    )
+
+
+@commish_debug_router.get("/debug/today", response_class=HTMLResponse)
+@commish_debug_router.get("/debug/today-transactions", response_class=HTMLResponse)
+def today_transaction_debug(request: Request):
+    league_key = _current_league_key()
+    encoded_key = urllib.parse.quote(league_key, safe=".-_")
+    payload = _fantasy_get(
+        request,
+        f"league/{encoded_key}/transactions;count=200",
+    )
+    today_central = datetime.now(tz=CENTRAL_TZ).strftime("%Y-%m-%d")
+    records = _transaction_records(payload, date_filter=today_central)
+    return _render_debug_page(
+        title_label="Today’s Yahoo Transactions",
+        intro=(
+            "This view requests every Yahoo transaction type for today in Central "
+            "Time, not just commissioner transactions. Every scalar field is shown "
+            "inline so we can inspect the 7:21 AM Titans/Packers trade and anything "
+            "Yahoo recorded after it. Sensitive account fields are redacted."
+        ),
+        warning=(
+            "Please screenshot the 7:21 AM trade card and every transaction after it, "
+            "especially anything with a time shortly after 7:21 AM."
+        ),
+        records=records,
+        show_all_inline=True,
     )

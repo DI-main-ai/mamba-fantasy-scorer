@@ -54,6 +54,7 @@
                 <a class="dashboard-button" href="#points-breakdown">Points For</a>
                 <a class="dashboard-button" href="#mamba-breakdown">Mamba Points</a>
                 <a class="dashboard-button" href="#weekly-matchups">Matchups</a>
+                {% if show_trades_section %}<a class="dashboard-button" href="#trades">Trades</a>{% endif %}
                 <a class="dashboard-button" href="/scoring-log?season={{ season }}&week={{ current_week }}">Live Log</a>
             </div>
             <span class="updated-label">Through Week {{ current_week }}</span>

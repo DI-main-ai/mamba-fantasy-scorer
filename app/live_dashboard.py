@@ -12,7 +12,7 @@ from app.routes import (
     templates,
 )
 from app.scoring import build_hybrid_standings
-from app.trade_tracker import load_trade_section
+from app.trade_tracker_positive import load_trade_section
 from app.yahoo_dashboard import HYBRID_START_SEASON, mamba_scoring_end_week
 from app.yahoo_live_cache import load_cached_yahoo_dashboard_data
 from app.yahoo_seasons import discover_mamba_seasons

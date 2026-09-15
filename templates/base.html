@@ -99,7 +99,7 @@
                 <div>
                     <p class="section-kicker section-kicker-gold">League Activity</p>
                     <h2>Trades</h2>
-                    <p class="section-description">Completed Yahoo trades for the {{ season }} season. When Mamba detects equal-and-opposite FAAB balance changes after a trade between the same teams, the FAAB is folded into the closest prior trade.</p>
+                    <p class="section-description">Completed Yahoo trades for the {{ season }} season. Because FAAB only increases in this league when it is received in a trade, Mamba uses a positive FAAB balance change to attach that amount to the closest prior unmatched trade involving the receiving team.</p>
                     <nav class="section-jump-nav" aria-label="Jump to another section">
                         {% if hybrid_scoring_enabled %}
                         <a class="section-jump-link" href="#hybrid-standings">Hybrid</a>
@@ -158,8 +158,8 @@
                     </div>
                     {% if trade.faab_association %}
                     <div class="trade-faab-match">
-                        <span><strong>Commissioner FAAB matched</strong> to this trade{% if trade.faab_minutes_after is not none %} · detected {{ trade.faab_minutes_after }} min after trade{% endif %}</span>
-                        <span class="trade-faab-confidence">same teams · equal/opposite balance change</span>
+                        <span><strong>Trade FAAB detected</strong>{% if trade.faab_minutes_after is not none %} · detected {{ trade.faab_minutes_after }} min after trade{% endif %}</span>
+                        <span class="trade-faab-confidence">FAAB gain · closest prior unmatched trade</span>
                     </div>
                     {% endif %}
                 </article>

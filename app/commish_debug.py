@@ -3,7 +3,7 @@ import json
 import os
 import urllib.parse
 from datetime import datetime
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 from zoneinfo import ZoneInfo
 
 from fastapi import APIRouter, HTTPException, Request
@@ -116,8 +116,8 @@ def _current_league_key() -> str:
 def _transaction_records(
     payload: Dict[str, Any],
     *,
-    transaction_type: str | None = None,
-    date_filter: str | None = None,
+    transaction_type: Optional[str] = None,
+    date_filter: Optional[str] = None,
 ) -> List[Dict[str, Any]]:
     records: List[Dict[str, Any]] = []
     seen = set()

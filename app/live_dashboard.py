@@ -12,6 +12,7 @@ from app.routes import (
     templates,
 )
 from app.scoring import build_hybrid_standings
+from app.trade_tracker import load_trade_section
 from app.yahoo_dashboard import HYBRID_START_SEASON, mamba_scoring_end_week
 from app.yahoo_live_cache import load_cached_yahoo_dashboard_data
 from app.yahoo_seasons import discover_mamba_seasons
@@ -107,6 +108,19 @@ def live_dashboard_home(
         if team.get("name")
     }
 
+    league_key = str(data.get("league_key") or "")
+    trade_state = load_trade_section(
+        request=request,
+        season=selected_season,
+        league_key=league_key,
+    ) if league_key else {
+        "trades": [],
+        "trade_count": 0,
+        "association_count": 0,
+        "refreshed_at": 0,
+    }
+    trades = trade_state.get("trades", []) if isinstance(trade_state.get("trades"), list) else []
+
     common_context = {
         "request": request,
         "page_title": "Mamba Fantasy",
@@ -131,6 +145,13 @@ def live_dashboard_home(
         "hybrid_scoring_enabled": hybrid_scoring_enabled,
         "standings_end_week": standings_end_week,
         "team_logos_by_name": team_logos_by_name,
+        "trades": trades,
+        "trade_count": int(trade_state.get("trade_count") or len(trades)),
+        "trade_faab_match_count": int(trade_state.get("association_count") or 0),
+        "trade_tracker_refreshed_at": float(trade_state.get("refreshed_at") or 0),
+        "trade_tracker_stale": bool(trade_state.get("stale")),
+        "trade_tracker_error": trade_state.get("error"),
+        "show_trades_section": bool(trades) or selected_season == current_calendar_season,
     }
 
     if data["mode"] == "matchups":

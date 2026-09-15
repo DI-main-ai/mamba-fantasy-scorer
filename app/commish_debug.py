@@ -137,6 +137,7 @@ def _commish_resources(payload: Dict[str, Any]) -> List[Dict[str, Any]]:
     return records
 
 
+@commish_debug_router.get("/debug/commish", response_class=HTMLResponse)
 @commish_debug_router.get("/debug/commish-transactions", response_class=HTMLResponse)
 def commish_transaction_debug(request: Request):
     league_key = _current_league_key()

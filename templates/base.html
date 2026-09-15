@@ -17,6 +17,7 @@
     <link rel="stylesheet" href="{{ url_for('static', path='css/matchup-detail.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', path='css/scoring-log.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', path='css/trades.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', path='css/navigation-grid.css') }}">
 </head>
 <body>
     <header class="site-header">
@@ -98,7 +99,7 @@
                 <div>
                     <p class="section-kicker section-kicker-gold">League Activity</p>
                     <h2>Trades</h2>
-                    <p class="section-description">Completed Yahoo trades for the {{ season }} season. When Mamba detects equal-and-opposite commissioner FAAB balance changes shortly after a trade between the same teams, the FAAB is folded into the trade itself.</p>
+                    <p class="section-description">Completed Yahoo trades for the {{ season }} season. When Mamba detects equal-and-opposite FAAB balance changes after a trade between the same teams, the FAAB is folded into the closest prior trade.</p>
                     <nav class="section-jump-nav" aria-label="Jump to another section">
                         {% if hybrid_scoring_enabled %}
                         <a class="section-jump-link" href="#hybrid-standings">Hybrid</a>
@@ -157,7 +158,7 @@
                     </div>
                     {% if trade.faab_association %}
                     <div class="trade-faab-match">
-                        <span><strong>Commissioner FAAB matched</strong> to this trade{% if trade.faab_minutes_after is not none %} · {{ trade.faab_minutes_after }} min after trade{% endif %}</span>
+                        <span><strong>Commissioner FAAB matched</strong> to this trade{% if trade.faab_minutes_after is not none %} · detected {{ trade.faab_minutes_after }} min after trade{% endif %}</span>
                         <span class="trade-faab-confidence">same teams · equal/opposite balance change</span>
                     </div>
                     {% endif %}
@@ -165,7 +166,7 @@
                 {% else %}
                 <div class="trade-empty">
                     <strong>No completed Yahoo trades found for {{ season }}.</strong>
-                    Trades will appear here automatically when Yahoo reports them. Commissioner FAAB matching starts from Mamba's first stored FAAB balance snapshot unless Yahoo exposes an explicit FAAB amount in the commissioner transaction itself.
+                    Trades will appear here automatically when Yahoo reports them. FAAB matching begins from Mamba's first stored team-balance snapshot.
                 </div>
                 {% endfor %}
             </div>

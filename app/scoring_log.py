@@ -42,6 +42,7 @@ SCORING_LOG_PREFIX = (
     if _IS_WEEK_SELECTOR_TEST
     else "mamba:scoring-log:v1"
 )
+LEGACY_SCORING_LOG_PREFIX = "mamba:scoring-log:v1"
 CURRENT_STATUS_KEY = f"{SCORING_LOG_PREFIX}:current-status"
 COLLECTOR_LOCK_KEY = f"{SCORING_LOG_PREFIX}:collector-lock"
 MAX_EVENTS_PER_WEEK = 5000
@@ -73,6 +74,22 @@ def _status_key(season: int, week: int) -> str:
 
 def _weeks_key(season: int) -> str:
     return f"{SCORING_LOG_PREFIX}:{int(season)}:weeks"
+
+
+def _legacy_snapshot_key(season: int, week: int) -> str:
+    return f"{LEGACY_SCORING_LOG_PREFIX}:{int(season)}:{int(week)}:snapshot"
+
+
+def _legacy_events_key(season: int, week: int) -> str:
+    return f"{LEGACY_SCORING_LOG_PREFIX}:{int(season)}:{int(week)}:events"
+
+
+def _legacy_status_key(season: int, week: int) -> str:
+    return f"{LEGACY_SCORING_LOG_PREFIX}:{int(season)}:{int(week)}:status"
+
+
+def _legacy_weeks_key(season: int) -> str:
+    return f"{LEGACY_SCORING_LOG_PREFIX}:{int(season)}:weeks"
 
 
 def _server_request() -> StarletteRequest:
@@ -135,13 +152,11 @@ def _read_version(season: int, week: int) -> int:
         return 0
 
 
-def _read_events(season: int, week: int) -> List[Dict[str, Any]]:
+def _read_events_from_key(key: str) -> List[Dict[str, Any]]:
     if _upstash_config() is None:
         return []
     try:
-        raw = _upstash_command(
-            ["LRANGE", _events_key(season, week), 0, MAX_EVENTS_PER_WEEK - 1]
-        )
+        raw = _upstash_command(["LRANGE", key, 0, MAX_EVENTS_PER_WEEK - 1])
         if not isinstance(raw, list):
             return []
         events: List[Dict[str, Any]] = []
@@ -161,9 +176,44 @@ def _read_events(season: int, week: int) -> List[Dict[str, Any]]:
             events.append(event)
         return events
     except Exception as exc:
-        print(f"WARNING: scoring log event read failed: {exc}")
+        print(f"WARNING: scoring log event read failed for {key}: {exc}")
         return []
 
+
+def _read_events(season: int, week: int) -> List[Dict[str, Any]]:
+    primary = _read_events_from_key(_events_key(season, week))
+    if not _IS_WEEK_SELECTOR_TEST:
+        return primary
+
+    # The test collector writes to an isolated namespace, but the UI should
+    # still retain the production archive. This lets us test new action text
+    # without losing Week 1 or the earlier Week 2 scoring history.
+    legacy = _read_events_from_key(_legacy_events_key(season, week))
+    if not legacy:
+        return primary
+
+    # Suppress the test collector's one-time baseline rows when production
+    # already has history for the week; otherwise the same player totals appear
+    # twice. New test "change" events remain visible and can carry action text.
+    combined = [
+        event
+        for event in primary
+        if str(event.get("event_type") or "") != "imported"
+    ] + legacy
+
+    deduped: Dict[str, Dict[str, Any]] = {}
+    anonymous: List[Dict[str, Any]] = []
+    for event in combined:
+        event_id = str(event.get("event_id") or "")
+        if event_id:
+            # Prefer the new test version if both stores contain the same event.
+            deduped.setdefault(event_id, event)
+        else:
+            anonymous.append(event)
+
+    merged = list(deduped.values()) + anonymous
+    merged.sort(key=lambda item: float(item.get("detected_at") or 0), reverse=True)
+    return merged
 
 def _append_events(season: int, week: int, events: List[Dict[str, Any]]) -> int:
     if not events:
@@ -190,12 +240,12 @@ def _register_week(season: int, week: int) -> None:
         print(f"WARNING: scoring log week index update failed: {exc}")
 
 
-def _available_logged_weeks(season: int) -> List[int]:
+def _weeks_from_key(key: str) -> List[int]:
     if _upstash_config() is None:
         return []
     try:
-        raw = _upstash_command(["SMEMBERS", _weeks_key(season)])
-        values = []
+        raw = _upstash_command(["SMEMBERS", key])
+        values: List[int] = []
         for item in raw or []:
             try:
                 values.append(int(item))
@@ -205,6 +255,12 @@ def _available_logged_weeks(season: int) -> List[int]:
     except Exception:
         return []
 
+
+def _available_logged_weeks(season: int) -> List[int]:
+    values = set(_weeks_from_key(_weeks_key(season)))
+    if _IS_WEEK_SELECTOR_TEST:
+        values.update(_weeks_from_key(_legacy_weeks_key(season)))
+    return sorted(values)
 
 def _event_id(
     season: int,
@@ -1129,6 +1185,10 @@ def scoring_log_page(
 
     snapshot = _read_json(_snapshot_key(selected_season, selected_week)) or {}
     status = _read_json(_status_key(selected_season, selected_week)) or {}
+    if _IS_WEEK_SELECTOR_TEST and not snapshot:
+        snapshot = _read_json(_legacy_snapshot_key(selected_season, selected_week)) or {}
+    if _IS_WEEK_SELECTOR_TEST and not status:
+        status = _read_json(_legacy_status_key(selected_season, selected_week)) or {}
     events = _read_events(selected_season, selected_week)
 
     if team:

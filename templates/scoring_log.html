@@ -77,6 +77,10 @@
                     {% if event.nfl_team %}{{ event.nfl_team }}{% endif %}
                     {% if event.selected_position %}{% if event.nfl_team %} · {% endif %}{{ event.selected_position }}{% endif %}
                 </div>
+                {% if event.action_label %}
+                <div class="scoring-action">{{ event.action_label }}</div>
+                {% if event.action_breakdown %}<div class="scoring-action-breakdown">{{ event.action_breakdown }}</div>{% endif %}
+                {% endif %}
                 {% if event.event_type == 'imported' %}<span class="scoring-import-note">Pre-tracking total</span>{% endif %}
             </div>
 

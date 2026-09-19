@@ -26,7 +26,7 @@
 
         <div class="scoring-filter">
             <label for="log-week">Week</label>
-            <select id="log-week" name="week" onchange="this.form.submit()">
+            <select id="log-week" name="week" onchange="this.form.requestSubmit()">
                 {% if logged_weeks %}
                     {% for week_number in logged_weeks %}
                     <option value="{{ week_number }}" {% if week_number == current_week %}selected{% endif %}>Week {{ week_number }}</option>
@@ -39,7 +39,7 @@
 
         <div class="scoring-filter">
             <label for="log-team">Team</label>
-            <select id="log-team" name="team" onchange="this.form.submit()">
+            <select id="log-team" name="team" onchange="this.form.requestSubmit()">
                 <option value="">All teams</option>
                 {% for team in teams %}
                 <option value="{{ team.team_key }}" {% if selected_team == team.team_key %}selected{% endif %}>{{ team.name }}</option>
@@ -49,7 +49,7 @@
 
         <div class="scoring-filter">
             <label for="log-matchup">Matchup</label>
-            <select id="log-matchup" name="matchup" onchange="this.form.submit()">
+            <select id="log-matchup" name="matchup" onchange="this.form.requestSubmit()">
                 <option value="">All matchups</option>
                 {% for option in matchup_options %}
                 <option value="{{ option.index }}" {% if selected_matchup is not none and selected_matchup == option.index %}selected{% endif %}>{{ option.label }}</option>
@@ -59,7 +59,7 @@
 
         <div class="scoring-filter">
             <label for="log-order">Order</label>
-            <select id="log-order" name="order" onchange="this.form.submit()">
+            <select id="log-order" name="order" onchange="this.form.requestSubmit()">
                 <option value="newest" {% if selected_order == 'newest' %}selected{% endif %}>Newest first</option>
                 <option value="oldest" {% if selected_order == 'oldest' %}selected{% endif %}>Oldest first</option>
             </select>

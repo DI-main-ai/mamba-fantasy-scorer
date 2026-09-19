@@ -15,7 +15,14 @@ from starlette.requests import Request as StarletteRequest
 from app.routes import templates
 from app.yahoo_auth import _fantasy_get
 from app.yahoo_dashboard import _extract_team_logo_urls, _normalize_matchups
-from app.yahoo_mamba import _extract_matchups, _extract_unique_teams, _league_metadata
+from app.yahoo_mamba import (
+    _extract_matchups,
+    _extract_unique_teams,
+    _first_value_for_key,
+    _league_metadata,
+    _scalar_map,
+    _walk_values_for_key,
+)
 from app.yahoo_matchup_detail import (
     BENCH_POSITIONS,
     _extract_player_points,
@@ -217,6 +224,9 @@ def _make_event(
     new_total: float,
     detected_at: float,
     event_type: str,
+    stat_changes: Optional[List[Dict[str, Any]]] = None,
+    action_label: str = "",
+    action_breakdown: str = "",
 ) -> Dict[str, Any]:
     team_key = str(team.get("team_key") or "")
     player_key = str(player.get("player_key") or "")
@@ -247,6 +257,9 @@ def _make_event(
         "previous_total": round(float(previous_total), 4),
         "new_total": round(float(new_total), 4),
         "delta": round(float(delta), 4),
+        "stat_changes": stat_changes or [],
+        "action_label": str(action_label or ""),
+        "action_breakdown": str(action_breakdown or ""),
     }
 
 
@@ -325,14 +338,42 @@ def _load_starter_roster(
     return starters
 
 
-def _fetch_player_points_batched(
+def _extract_player_week_data(payload: Dict[str, Any]) -> Dict[str, Dict[str, Any]]:
+    results: Dict[str, Dict[str, Any]] = {}
+    for player_resource in _walk_values_for_key(payload, "player"):
+        fields = _scalar_map(player_resource)
+        player_key = fields.get("player_key")
+        if not player_key:
+            continue
+
+        points_node = _first_value_for_key(player_resource, "player_points")
+        point_fields = _scalar_map(points_node)
+
+        stats: Dict[str, float] = {}
+        player_stats_node = _first_value_for_key(player_resource, "player_stats")
+        for stat_resource in _walk_values_for_key(player_stats_node, "stat"):
+            stat_fields = _scalar_map(stat_resource)
+            stat_id = stat_fields.get("stat_id")
+            value = _as_float(stat_fields.get("value"))
+            if stat_id in (None, "") or value is None:
+                continue
+            stats[str(stat_id)] = float(value)
+
+        results[str(player_key)] = {
+            "points": _as_float(point_fields.get("total")),
+            "stats": stats,
+        }
+    return results
+
+
+def _fetch_player_week_data_batched(
     request: Request,
     league_key: str,
     week: int,
     player_keys: List[str],
-) -> Dict[str, Optional[float]]:
+) -> Dict[str, Dict[str, Any]]:
     encoded_league_key = urllib.parse.quote(league_key, safe=".-_")
-    results: Dict[str, Optional[float]] = {}
+    results: Dict[str, Dict[str, Any]] = {}
     unique_keys = list(dict.fromkeys(key for key in player_keys if key))
 
     for index in range(0, len(unique_keys), PLAYER_BATCH_SIZE):
@@ -347,9 +388,280 @@ def _fetch_player_points_batched(
                 f"/stats;type=week;week={int(week)}"
             ),
         )
-        results.update(_extract_player_points(payload))
+        results.update(_extract_player_week_data(payload))
 
     return results
+
+
+def _load_stat_metadata(request: Request, league_key: str) -> Dict[str, Dict[str, Any]]:
+    """Load Yahoo stat names plus this league's scoring modifiers.
+
+    The metadata is stored in the weekly snapshot so it is fetched once rather
+    than on every scoring-log poll.
+    """
+    metadata: Dict[str, Dict[str, Any]] = {}
+    game_key = str(league_key).split(".l.", 1)[0]
+    encoded_game_key = urllib.parse.quote(game_key, safe=".-_")
+    encoded_league_key = urllib.parse.quote(league_key, safe=".-_")
+
+    try:
+        categories_payload = _fantasy_get(
+            request, f"game/{encoded_game_key}/stat_categories"
+        )
+        for stat_resource in _walk_values_for_key(categories_payload, "stat"):
+            fields = _scalar_map(stat_resource)
+            stat_id = fields.get("stat_id")
+            if stat_id in (None, ""):
+                continue
+            key = str(stat_id)
+            name = (
+                fields.get("name")
+                or fields.get("display_name")
+                or fields.get("abbr")
+                or f"Stat {key}"
+            )
+            metadata[key] = {
+                "name": str(name),
+                "display_name": str(fields.get("display_name") or name),
+                "modifier": None,
+            }
+    except Exception as exc:
+        print(f"WARNING: scoring log stat categories unavailable: {exc}")
+
+    try:
+        settings_payload = _fantasy_get(
+            request, f"league/{encoded_league_key}/settings"
+        )
+        modifiers_node = _first_value_for_key(settings_payload, "stat_modifiers")
+        for stat_resource in _walk_values_for_key(modifiers_node, "stat"):
+            fields = _scalar_map(stat_resource)
+            stat_id = fields.get("stat_id")
+            modifier = _as_float(fields.get("value"))
+            if stat_id in (None, "") or modifier is None:
+                continue
+            key = str(stat_id)
+            metadata.setdefault(
+                key,
+                {"name": f"Stat {key}", "display_name": f"Stat {key}", "modifier": None},
+            )
+            # Yahoo can expose more than one modifier for newer custom scoring.
+            # Keep the first generic value; contribution text is shown only when
+            # the resulting sum agrees with Yahoo's actual fantasy-point delta.
+            if metadata[key].get("modifier") is None:
+                metadata[key]["modifier"] = float(modifier)
+    except Exception as exc:
+        print(f"WARNING: scoring log stat modifiers unavailable: {exc}")
+
+    return metadata
+
+
+def _friendly_number(value: float) -> str:
+    rounded = round(float(value), 4)
+    if abs(rounded - round(rounded)) <= EPSILON:
+        return str(int(round(rounded)))
+    return f"{rounded:.2f}".rstrip("0").rstrip(".")
+
+
+def _normalized_stat_name(change: Dict[str, Any]) -> str:
+    return str(change.get("name") or "").strip().lower().replace("_", " ")
+
+
+def _find_change(
+    changes: List[Dict[str, Any]],
+    *required_terms: str,
+) -> Optional[Dict[str, Any]]:
+    for change in changes:
+        name = _normalized_stat_name(change)
+        if all(term in name for term in required_terms):
+            return change
+    return None
+
+
+def _stat_changes(
+    previous: Dict[str, Any],
+    current: Dict[str, Any],
+    stat_meta: Dict[str, Dict[str, Any]],
+) -> List[Dict[str, Any]]:
+    changes: List[Dict[str, Any]] = []
+    for stat_id in sorted(set(previous) | set(current), key=lambda value: str(value)):
+        old_value = _as_float(previous.get(stat_id)) or 0.0
+        new_value = _as_float(current.get(stat_id)) or 0.0
+        delta = float(new_value) - float(old_value)
+        if abs(delta) <= EPSILON:
+            continue
+
+        meta = stat_meta.get(str(stat_id), {})
+        name = str(meta.get("display_name") or meta.get("name") or f"Stat {stat_id}")
+        modifier = _as_float(meta.get("modifier"))
+        contribution = delta * modifier if modifier is not None else None
+        changes.append(
+            {
+                "stat_id": str(stat_id),
+                "name": name,
+                "delta": round(delta, 4),
+                "modifier": modifier,
+                "point_contribution": (
+                    round(float(contribution), 4)
+                    if contribution is not None
+                    else None
+                ),
+            }
+        )
+    return changes
+
+
+def _build_action_details(
+    changes: List[Dict[str, Any]],
+    point_delta: float,
+    position: str,
+) -> Tuple[str, str]:
+    if not changes:
+        return "", ""
+
+    position_upper = str(position or "").upper()
+    rush_yards = _find_change(changes, "rush", "yard")
+    rush_attempts = _find_change(changes, "rush", "attempt")
+    rush_td = _find_change(changes, "rush", "touch")
+    rush_first = _find_change(changes, "rush", "first")
+
+    rec_yards = _find_change(changes, "receiv", "yard")
+    receptions = _find_change(changes, "reception")
+    rec_td = _find_change(changes, "receiv", "touch")
+    rec_first = _find_change(changes, "receiv", "first")
+
+    pass_yards = _find_change(changes, "pass", "yard")
+    completions = _find_change(changes, "completion")
+    pass_td = _find_change(changes, "pass", "touch")
+    pass_first = _find_change(changes, "pass", "first")
+
+    generic_first = next(
+        (
+            change
+            for change in changes
+            if "first" in _normalized_stat_name(change)
+            and change not in {rush_first, rec_first, pass_first}
+        ),
+        None,
+    )
+
+    action = ""
+    extras: List[str] = []
+
+    if rush_yards and float(rush_yards.get("delta") or 0) != 0:
+        yards = float(rush_yards["delta"])
+        attempts = float((rush_attempts or {}).get("delta") or 0)
+        if abs(attempts - 1.0) <= EPSILON:
+            action = f"{_friendly_number(yards)}-yard run"
+        else:
+            action = f"{_friendly_number(yards):s} rushing yards"
+        first_count = float((rush_first or generic_first or {}).get("delta") or 0)
+        if first_count > 0:
+            extras.append(
+                "1st down"
+                if abs(first_count - 1) <= EPSILON
+                else f"{_friendly_number(first_count)} first downs"
+            )
+        if float((rush_td or {}).get("delta") or 0) > 0:
+            extras.append("rushing TD")
+
+    elif rec_yards and float(rec_yards.get("delta") or 0) != 0:
+        yards = float(rec_yards["delta"])
+        catches = float((receptions or {}).get("delta") or 0)
+        if abs(catches - 1.0) <= EPSILON:
+            action = f"{_friendly_number(yards)}-yard reception"
+        else:
+            action = f"{_friendly_number(yards)} receiving yards"
+            if catches > 0:
+                extras.append(
+                    f"{_friendly_number(catches)} reception"
+                    + ("" if abs(catches - 1) <= EPSILON else "s")
+                )
+        first_count = float((rec_first or generic_first or {}).get("delta") or 0)
+        if first_count > 0:
+            extras.append(
+                "1st down"
+                if abs(first_count - 1) <= EPSILON
+                else f"{_friendly_number(first_count)} first downs"
+            )
+        if float((rec_td or {}).get("delta") or 0) > 0:
+            extras.append("receiving TD")
+
+    elif pass_yards and float(pass_yards.get("delta") or 0) != 0:
+        yards = float(pass_yards["delta"])
+        completed = float((completions or {}).get("delta") or 0)
+        if abs(completed - 1.0) <= EPSILON:
+            action = f"{_friendly_number(yards)}-yard completion"
+        else:
+            action = f"{_friendly_number(yards)} passing yards"
+        first_count = float((pass_first or {}).get("delta") or 0)
+        if first_count > 0:
+            extras.append(
+                "passing 1st down"
+                if abs(first_count - 1) <= EPSILON
+                else f"{_friendly_number(first_count)} passing first downs"
+            )
+        if float((pass_td or {}).get("delta") or 0) > 0:
+            extras.append("passing TD")
+
+    if not action:
+        scoring_changes = [
+            change
+            for change in changes
+            if change.get("point_contribution") is not None
+            and abs(float(change.get("point_contribution") or 0)) > EPSILON
+        ]
+        useful = scoring_changes or changes
+        labels = []
+        for change in useful[:3]:
+            delta = float(change.get("delta") or 0)
+            name = str(change.get("name") or "stat")
+            labels.append(f"{_friendly_number(abs(delta))} {name}")
+        action = " · ".join(labels)
+
+    if extras:
+        action = " · ".join([action, *extras]) if action else " · ".join(extras)
+
+    contribution_parts: List[str] = []
+    contribution_total = 0.0
+    contribution_count = 0
+    for change in changes:
+        contribution = change.get("point_contribution")
+        if contribution is None or abs(float(contribution)) <= EPSILON:
+            continue
+        contribution = float(contribution)
+        contribution_total += contribution
+        contribution_count += 1
+        delta = float(change.get("delta") or 0)
+        name = str(change.get("name") or "stat").lower()
+        contribution_parts.append(
+            f"{_friendly_number(abs(delta))} {name} ({contribution:+.2f})"
+        )
+
+    breakdown = ""
+    if (
+        contribution_count
+        and abs(contribution_total - float(point_delta)) <= 0.06
+        and contribution_parts
+    ):
+        breakdown = " · ".join(contribution_parts[:4])
+
+    # For defenses and unusual Yahoo scoring categories, the generic scoring
+    # stat names are safer than pretending a specific NFL play occurred.
+    if position_upper in {"DEF", "D/ST"} and changes:
+        scoring_changes = [
+            change
+            for change in changes
+            if change.get("point_contribution") is not None
+            and abs(float(change.get("point_contribution") or 0)) > EPSILON
+        ]
+        if scoring_changes:
+            action = " · ".join(
+                f"{_friendly_number(abs(float(change.get('delta') or 0)))} "
+                f"{str(change.get('name') or 'stat')}"
+                for change in scoring_changes[:3]
+            )
+
+    return action, breakdown
 
 
 def _initialize_snapshot(
@@ -378,15 +690,18 @@ def _initialize_snapshot(
             "players": roster,
         }
 
-    points_by_key = _fetch_player_points_batched(
+    week_data_by_key = _fetch_player_week_data_batched(
         request, league_key, week, all_player_keys
     )
+    stat_meta = _load_stat_metadata(request, league_key)
 
     imported_events: List[Dict[str, Any]] = []
     for team in snapshot_teams.values():
         for player_key, player in team.get("players", {}).items():
-            points = points_by_key.get(player_key)
+            player_data = week_data_by_key.get(player_key, {})
+            points = player_data.get("points")
             player["points"] = points
+            player["stats"] = dict(player_data.get("stats") or {})
             if points is None or abs(float(points)) <= EPSILON:
                 continue
             imported_events.append(
@@ -409,6 +724,7 @@ def _initialize_snapshot(
         "initialized_at": detected_at,
         "refreshed_at": detected_at,
         "last_roster_refresh_at": detected_at,
+        "stat_meta": stat_meta,
         "teams": snapshot_teams,
     }
     return snapshot, imported_events
@@ -443,6 +759,7 @@ def _refresh_rosters(
             merged = dict(player)
             if player_key in old_players:
                 merged["points"] = old_players[player_key].get("points")
+                merged["stats"] = dict(old_players[player_key].get("stats") or {})
             merged_players[player_key] = merged
         current["players"] = merged_players
 
@@ -457,8 +774,19 @@ def _collect_existing_snapshot(
     detected_at: float,
 ) -> List[Dict[str, Any]]:
     snapshot_teams: Dict[str, Dict[str, Any]] = snapshot.setdefault("teams", {})
+    stat_meta = snapshot.get("stat_meta")
+    if not isinstance(stat_meta, dict) or not stat_meta:
+        stat_meta = _load_stat_metadata(request, league_key)
+        snapshot["stat_meta"] = stat_meta
+
+    needs_stat_baseline = any(
+        "stats" not in player
+        for team in snapshot_teams.values()
+        for player in (team.get("players") or {}).values()
+    )
     full_scan = (
-        detected_at - float(snapshot.get("last_roster_refresh_at") or 0)
+        needs_stat_baseline
+        or detected_at - float(snapshot.get("last_roster_refresh_at") or 0)
         >= FULL_ROSTER_SCAN_SECONDS
     )
 
@@ -514,7 +842,7 @@ def _collect_existing_snapshot(
         snapshot["refreshed_at"] = detected_at
         return []
 
-    points_by_key = _fetch_player_points_batched(
+    week_data_by_key = _fetch_player_week_data_batched(
         request, league_key, week, all_player_keys
     )
 
@@ -524,18 +852,40 @@ def _collect_existing_snapshot(
     for team_key in candidate_team_keys:
         team = snapshot_teams.get(team_key, {})
         for player_key, player in (team.get("players") or {}).items():
-            new_points = points_by_key.get(player_key)
+            player_data = week_data_by_key.get(player_key, {})
+            new_points = player_data.get("points")
+            new_stats = dict(player_data.get("stats") or {})
             if new_points is None:
                 continue
             previous_points = _as_float(player.get("points"))
+            previous_stats = player.get("stats")
             if previous_points is None:
                 # A newly tracked starter is baselined without inventing a live
                 # scoring event that may have happened before the roster refresh.
                 player["points"] = float(new_points)
+                player["stats"] = new_stats
                 continue
 
             delta = float(new_points) - float(previous_points)
             if abs(delta) > EPSILON:
+                changes = (
+                    _stat_changes(
+                        dict(previous_stats or {}),
+                        new_stats,
+                        stat_meta,
+                    )
+                    if isinstance(previous_stats, dict)
+                    else []
+                )
+                action_label, action_breakdown = _build_action_details(
+                    changes,
+                    delta,
+                    str(
+                        player.get("selected_position")
+                        or player.get("display_position")
+                        or ""
+                    ),
+                )
                 events.append(
                     _make_event(
                         season=season,
@@ -546,10 +896,14 @@ def _collect_existing_snapshot(
                         new_total=float(new_points),
                         detected_at=detected_at,
                         event_type="change",
+                        stat_changes=changes,
+                        action_label=action_label,
+                        action_breakdown=action_breakdown,
                     )
                 )
                 teams_with_player_change.add(team_key)
             player["points"] = float(new_points)
+            player["stats"] = new_stats
 
     for team_key, incoming in incoming_by_key.items():
         current = snapshot_teams.get(team_key)

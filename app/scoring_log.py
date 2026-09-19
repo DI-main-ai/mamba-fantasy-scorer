@@ -490,7 +490,7 @@ def _stat_changes(
             continue
 
         meta = stat_meta.get(str(stat_id), {})
-        name = str(meta.get("display_name") or meta.get("name") or f"Stat {stat_id}")
+        name = str(meta.get("name") or meta.get("display_name") or f"Stat {stat_id}")
         modifier = _as_float(meta.get("modifier"))
         contribution = delta * modifier if modifier is not None else None
         changes.append(

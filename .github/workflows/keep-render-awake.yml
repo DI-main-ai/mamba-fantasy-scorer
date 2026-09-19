@@ -1,0 +1,19 @@
+name: Keep Render Main Site Awake
+
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Ping production Render site
+        run: |
+          curl --fail --silent --show-error \
+            --max-time 30 \
+            --retry 2 \
+            --retry-delay 5 \
+            https://mambaleague.onrender.com/ > /dev/null

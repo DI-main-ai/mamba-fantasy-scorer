@@ -25,7 +25,6 @@ from app.yahoo_mamba import (
 )
 from app.yahoo_matchup_detail import (
     BENCH_POSITIONS,
-    _extract_player_points,
     _extract_roster_players,
 )
 from app.yahoo_shared_auth import _upstash_command, _upstash_config
@@ -539,7 +538,7 @@ def _build_action_details(
             change
             for change in changes
             if "first" in _normalized_stat_name(change)
-            and change not in {rush_first, rec_first, pass_first}
+            and all(change is not item for item in (rush_first, rec_first, pass_first))
         ),
         None,
     )

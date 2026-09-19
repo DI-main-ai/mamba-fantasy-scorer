@@ -32,7 +32,16 @@ from app.yahoo_shared_auth import _upstash_command, _upstash_config
 
 scoring_log_router = APIRouter(tags=["scoring-log"])
 
-SCORING_LOG_PREFIX = "mamba:scoring-log:v1"
+# Keep the week-selector experiment isolated from production while both Render
+# services are running. When this code is later promoted, production keeps the
+# existing v1 history because its Yahoo redirect URI does not contain the test
+# service name.
+_IS_WEEK_SELECTOR_TEST = "week-selector-test" in os.getenv("YAHOO_REDIRECT_URI", "").lower()
+SCORING_LOG_PREFIX = (
+    "mamba:scoring-log:action-test:v1"
+    if _IS_WEEK_SELECTOR_TEST
+    else "mamba:scoring-log:v1"
+)
 CURRENT_STATUS_KEY = f"{SCORING_LOG_PREFIX}:current-status"
 COLLECTOR_LOCK_KEY = f"{SCORING_LOG_PREFIX}:collector-lock"
 MAX_EVENTS_PER_WEEK = 5000

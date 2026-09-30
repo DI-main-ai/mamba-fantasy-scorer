@@ -86,7 +86,7 @@ def _update_faab_tracking_positive_gain(
     associations = _base._load_associations(season)
     _base._backfill_direct_commish_associations(trades, commish, associations)
 
-    previous = _base._read_json(_base._snapshot_key(season)) or {}
+    previous = _base._load_previous_faab_snapshot(season)
     previous_balances = (
         previous.get("balances")
         if isinstance(previous.get("balances"), dict)

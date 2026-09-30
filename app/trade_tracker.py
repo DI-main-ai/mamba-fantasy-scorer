@@ -16,7 +16,13 @@ from app.yahoo_mamba import _first_value_for_key, _scalar_map, _walk_values_for_
 from app.yahoo_shared_auth import _upstash_command, _upstash_config
 
 
-TRADE_TRACKER_PREFIX = "mamba:trade-tracker:v1"
+PRODUCTION_TRADE_TRACKER_PREFIX = "mamba:trade-tracker:v1"
+_IS_WEEK_SELECTOR_TEST = "week-selector-test" in os.getenv("YAHOO_REDIRECT_URI", "").lower()
+TRADE_TRACKER_PREFIX = (
+    "mamba:trade-tracker:veto-test:v1"
+    if _IS_WEEK_SELECTOR_TEST
+    else PRODUCTION_TRADE_TRACKER_PREFIX
+)
 TRACKER_LOCK_KEY = f"{TRADE_TRACKER_PREFIX}:collector-lock"
 CURRENT_STATUS_KEY = f"{TRADE_TRACKER_PREFIX}:current-status"
 CURRENT_SEASON_REFRESH_SECONDS = 60
@@ -63,6 +69,14 @@ def _associations_key(season: int) -> str:
     return f"{TRADE_TRACKER_PREFIX}:{int(season)}:faab-associations"
 
 
+def _production_snapshot_key(season: int) -> str:
+    return f"{PRODUCTION_TRADE_TRACKER_PREFIX}:{int(season)}:faab-snapshot"
+
+
+def _production_associations_key(season: int) -> str:
+    return f"{PRODUCTION_TRADE_TRACKER_PREFIX}:{int(season)}:faab-associations"
+
+
 def _read_json(key: str) -> Optional[Dict[str, Any]]:
     if _upstash_config() is None:
         return None
@@ -106,6 +120,11 @@ def _as_int(value: Any) -> Optional[int]:
         return int(float(value))
     except (TypeError, ValueError):
         return None
+
+
+def _is_completed_trade_status(status: Any) -> bool:
+    normalized = str(status or "").strip().lower().replace("-", "_").replace(" ", "_")
+    return normalized in {"successful", "complete", "completed", "processed"}
 
 
 def _player_name(player_resource: Any) -> str:
@@ -269,6 +288,12 @@ def _extract_transactions(
         status = str(fields.get("status") or "")
 
         if transaction_type == "trade":
+            # Yahoo keeps vetoed/rejected/pending trade attempts in transaction
+            # history. Only terminal successful trades belong in Mamba's
+            # "Completed Trade" list or FAAB association candidates.
+            if not _is_completed_trade_status(status):
+                continue
+
             sides = _extract_trade_sides(transaction_resource, team_names)
             team_keys = sorted(
                 {
@@ -334,8 +359,17 @@ def _fetch_trade_inputs(
 
 def _load_associations(season: int) -> Dict[str, Dict[str, Any]]:
     stored = _read_json(_associations_key(season)) or {}
+    if _IS_WEEK_SELECTOR_TEST and not stored:
+        stored = _read_json(_production_associations_key(season)) or {}
     value = stored.get("associations")
     return dict(value) if isinstance(value, dict) else {}
+
+
+def _load_previous_faab_snapshot(season: int) -> Dict[str, Any]:
+    stored = _read_json(_snapshot_key(season)) or {}
+    if _IS_WEEK_SELECTOR_TEST and not stored:
+        stored = _read_json(_production_snapshot_key(season)) or {}
+    return stored
 
 
 def _save_associations(season: int, associations: Dict[str, Dict[str, Any]]) -> None:
@@ -414,7 +448,7 @@ def _update_faab_tracking(
     associations = _load_associations(season)
     _backfill_direct_commish_associations(trades, commish, associations)
 
-    previous = _read_json(_snapshot_key(season)) or {}
+    previous = _load_previous_faab_snapshot(season)
     previous_balances = previous.get("balances") if isinstance(previous.get("balances"), dict) else {}
     pending = previous.get("pending_changes") if isinstance(previous.get("pending_changes"), list) else []
 

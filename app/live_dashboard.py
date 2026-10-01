@@ -80,6 +80,55 @@ def _attach_team_logos(
             setattr(row, "logo_url", team_logos_by_name.get(team_name, ""))
 
 
+def _build_trade_activity_leaders(
+    trades: List[Dict[str, Any]],
+    limit: int = 5,
+) -> List[Dict[str, Any]]:
+    """Rank teams by completed-trade participation for the selected season."""
+    counts: Dict[str, Dict[str, Any]] = {}
+
+    for trade in trades:
+        seen_team_keys = set()
+        for side in trade.get("sides", []):
+            team_key = str(side.get("team_key") or "")
+            if not team_key or team_key in seen_team_keys:
+                continue
+            seen_team_keys.add(team_key)
+
+            entry = counts.setdefault(
+                team_key,
+                {
+                    "team_key": team_key,
+                    "team_name": str(side.get("team_name") or "Yahoo Team"),
+                    "logo_url": str(side.get("logo_url") or ""),
+                    "trade_count": 0,
+                },
+            )
+            entry["team_name"] = str(side.get("team_name") or entry["team_name"])
+            entry["logo_url"] = str(side.get("logo_url") or entry["logo_url"])
+            entry["trade_count"] = int(entry["trade_count"]) + 1
+
+    ranked = sorted(
+        counts.values(),
+        key=lambda item: (
+            -int(item.get("trade_count") or 0),
+            str(item.get("team_name") or "").lower(),
+        ),
+    )
+
+    # Competition ranking: 1, 1, 3, 4... for tied trade counts.
+    previous_count: Optional[int] = None
+    current_rank = 0
+    for index, item in enumerate(ranked, start=1):
+        count = int(item.get("trade_count") or 0)
+        if count != previous_count:
+            current_rank = index
+            previous_count = count
+        item["rank"] = current_rank
+
+    return ranked[: max(1, int(limit))]
+
+
 @live_dashboard_router.get("/", response_class=HTMLResponse)
 def live_dashboard_home(
     request: Request,
@@ -120,6 +169,7 @@ def live_dashboard_home(
         "refreshed_at": 0,
     }
     trades = trade_state.get("trades", []) if isinstance(trade_state.get("trades"), list) else []
+    trade_activity_leaders = _build_trade_activity_leaders(trades, limit=5)
 
     common_context = {
         "request": request,
@@ -146,6 +196,7 @@ def live_dashboard_home(
         "standings_end_week": standings_end_week,
         "team_logos_by_name": team_logos_by_name,
         "trades": trades,
+        "trade_activity_leaders": trade_activity_leaders,
         "trade_count": int(trade_state.get("trade_count") or len(trades)),
         "trade_faab_match_count": int(trade_state.get("association_count") or 0),
         "trade_tracker_refreshed_at": float(trade_state.get("refreshed_at") or 0),

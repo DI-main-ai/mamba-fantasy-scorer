@@ -322,13 +322,22 @@
 }
 
 @media (max-width: 700px) {
+    .trade-activity-mini {
+        max-width: 100%;
+    }
+
     .trade-activity-list {
-        gap: 6px;
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 5px;
+        max-width: 100%;
     }
 
     .trade-activity-item {
-        max-width: calc(50% - 3px);
-        flex: 1 1 calc(50% - 3px);
+        width: 100%;
+        max-width: none;
+        min-height: 28px;
+        padding: 4px 10px 4px 7px;
     }
 
     .trade-activity-name {

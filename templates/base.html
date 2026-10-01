@@ -99,7 +99,21 @@
                 <div>
                     <p class="section-kicker section-kicker-gold">League Activity</p>
                     <h2>Trades</h2>
-                    <p class="section-description">Completed Yahoo trades for the {{ season }} season. Because FAAB only increases in this league when it is received in a trade, Mamba uses a positive FAAB balance change to attach that amount to the closest prior unmatched trade involving the receiving team.</p>
+                    {% if trade_activity_leaders %}
+                    <div class="trade-activity-mini" aria-label="Most active traders this season">
+                        <span class="trade-activity-label">Most active traders</span>
+                        <div class="trade-activity-list">
+                            {% for team in trade_activity_leaders %}
+                            <span class="trade-activity-item">
+                                <span class="trade-activity-rank">{{ team.rank }}</span>
+                                {% if team.logo_url %}<img class="trade-activity-logo" src="{{ team.logo_url }}" alt="" loading="lazy">{% endif %}
+                                <span class="trade-activity-name">{{ team.team_name }}</span>
+                                <strong>{{ team.trade_count }}</strong>
+                            </span>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
                     <nav class="section-jump-nav" aria-label="Jump to another section">
                         {% if hybrid_scoring_enabled %}
                         <a class="section-jump-link" href="#hybrid-standings">Hybrid</a>

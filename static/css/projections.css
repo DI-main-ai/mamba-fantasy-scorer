@@ -90,3 +90,21 @@
         font-size: 8px;
     }
 }
+
+
+/* Projected-mode emphasis: keep team names upright, italicize the values
+   that are hypothetical rather than already in the books. */
+.projection-hybrid-table td {
+    font-style: italic;
+}
+
+.projection-hybrid-table .team-name,
+.projection-hybrid-table .leader-label {
+    font-style: normal;
+}
+
+.projection-audit-table .inline-rank,
+.projection-audit-table .rank-movement,
+.projection-current-cell {
+    font-style: italic;
+}

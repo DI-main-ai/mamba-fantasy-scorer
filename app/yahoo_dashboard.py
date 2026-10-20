@@ -185,9 +185,9 @@ def load_yahoo_dashboard_data(
 
     Hybrid/Mamba scoring exists only for seasons 2020 and newer. Seasons before
     2020 use Yahoo standings through their configured cutoff and matchup-only
-    views afterward. The Week dropdown only exposes weeks that actually have
-    Yahoo matchup/scoring data, with Week 1 retained for a not-yet-started
-    current season.
+    views afterward. For the current season, Yahoo's advertised current week is
+    selectable even before scoring starts so matchup projections can be shown
+    beginning as soon as Yahoo rolls the league into the new week.
     """
     season_record = _resolve_season_record(request, season)
     league_key = str(season_record["league_key"])
@@ -231,19 +231,25 @@ def load_yahoo_dashboard_data(
         current_week=data_search_ceiling,
         end_week=end_week,
     )
-    available_weeks = list(range(1, latest_data_week + 1))
+    selection_ceiling = (
+        max(latest_data_week, min(current_week, end_week))
+        if int(season) == current_calendar_season
+        else latest_data_week
+    )
+    available_weeks = list(range(1, selection_ceiling + 1))
 
     if requested_week is None:
         if int(season) == current_calendar_season:
-            # The current season always opens at the newest week with real data;
-            # before games begin this intentionally resolves to Week 1.
-            selected_week = latest_data_week
+            # Yahoo advances current_week before the first game is played. Use
+            # that week for matchups/projections while keeping actual standings
+            # based only on weeks that have real scoring data.
+            selected_week = selection_ceiling
         elif hybrid_scoring_enabled:
             selected_week = min(scoring_end_week, latest_data_week)
         else:
             selected_week = min(yahoo_standings_end_week, latest_data_week)
     else:
-        selected_week = max(1, min(int(requested_week), latest_data_week))
+        selected_week = max(1, min(int(requested_week), selection_ceiling))
 
     matchup_only = (
         hybrid_scoring_enabled and selected_week > scoring_end_week
@@ -266,7 +272,8 @@ def load_yahoo_dashboard_data(
             "league_key": league_key,
             "league_name": metadata.get("name") or "The Mamba League",
             "current_week": selected_week,
-            "maximum_week": latest_data_week,
+            "maximum_week": selection_ceiling,
+            "latest_scored_week": latest_data_week,
             "available_weeks": available_weeks,
             "teams": teams,
             "matchups": matchups,
@@ -276,7 +283,8 @@ def load_yahoo_dashboard_data(
             "hybrid_scoring_enabled": hybrid_scoring_enabled,
         }
 
-    week_numbers = [str(number) for number in range(1, selected_week + 1)]
+    actual_through_week = min(selected_week, latest_data_week)
+    week_numbers = [str(number) for number in range(1, actual_through_week + 1)]
     weeks: Dict[str, Dict[str, float]] = {}
     weekly_mamba_points: Dict[str, Dict[str, float]] = {}
     yahoo_teams: Dict[str, Dict[str, Any]] = {
@@ -285,7 +293,7 @@ def load_yahoo_dashboard_data(
     }
     selected_week_matchups: List[Dict[str, Any]] = []
 
-    for week_number in range(1, selected_week + 1):
+    for week_number in range(1, actual_through_week + 1):
         scoreboard_payload = _fantasy_get(
             request, f"league/{encoded_key}/scoreboard;week={week_number}"
         )
@@ -346,13 +354,40 @@ def load_yahoo_dashboard_data(
                 week_scores
             )
 
+    if selected_week > actual_through_week:
+        scoreboard_payload = _fantasy_get(
+            request, f"league/{encoded_key}/scoreboard;week={selected_week}"
+        )
+        selected_week_matchups = _normalize_matchups(
+            _extract_matchups(scoreboard_payload),
+            team_names_by_key,
+            team_logos_by_key,
+        )
+
+    projected_scores: Dict[str, float] = {}
+    for matchup in selected_week_matchups:
+        for team in matchup.get("teams", []):
+            name = str(team.get("name") or "")
+            projected_score = team.get("projected_score")
+            if not name or projected_score is None:
+                continue
+            projected_scores[name] = float(projected_score)
+
+    expected_team_names = set(team_names_by_key.values())
+    projection_available = (
+        bool(projected_scores)
+        and set(projected_scores) == expected_team_names
+    )
+
     return {
         "mode": "dashboard" if hybrid_scoring_enabled else "yahoo_only",
         "season": season,
         "league_key": league_key,
         "league_name": metadata.get("name") or "The Mamba League",
         "current_week": selected_week,
-        "maximum_week": latest_data_week,
+        "maximum_week": selection_ceiling,
+        "latest_scored_week": latest_data_week,
+        "actual_through_week": actual_through_week,
         "available_weeks": available_weeks,
         "teams": teams,
         "matchups": selected_week_matchups,
@@ -360,5 +395,7 @@ def load_yahoo_dashboard_data(
         "weeks": weeks,
         "weekly_mamba_points": weekly_mamba_points,
         "yahoo_teams": yahoo_teams,
+        "projected_scores": projected_scores,
+        "projection_available": projection_available,
         "hybrid_scoring_enabled": hybrid_scoring_enabled,
     }

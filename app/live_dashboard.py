@@ -1,3 +1,4 @@
+from copy import deepcopy
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
@@ -11,7 +12,7 @@ from app.routes import (
     build_yahoo_snapshot,
     templates,
 )
-from app.scoring import build_hybrid_standings
+from app.scoring import build_hybrid_standings, calculate_weekly_mamba_points
 from app.trade_tracker_positive import load_trade_section
 from app.yahoo_dashboard import HYBRID_START_SEASON, mamba_scoring_end_week
 from app.yahoo_live_cache import load_cached_yahoo_dashboard_data
@@ -80,6 +81,83 @@ def _attach_team_logos(
             setattr(row, "logo_url", team_logos_by_name.get(team_name, ""))
 
 
+def _projection_result_for_team(
+    matchup: Dict[str, Any],
+    team: Dict[str, Any],
+    opponent: Dict[str, Any],
+) -> str:
+    team_score = team.get("projected_score")
+    opponent_score = opponent.get("projected_score")
+    if team_score is None or opponent_score is None:
+        return "P"
+    team_score = float(team_score)
+    opponent_score = float(opponent_score)
+    if team_score > opponent_score:
+        return "W"
+    if team_score < opponent_score:
+        return "L"
+    return "T"
+
+
+def _build_projected_dashboard_state(
+    data: Dict[str, Any],
+) -> Optional[Dict[str, Any]]:
+    projected_scores = data.get("projected_scores")
+    if not isinstance(projected_scores, dict) or not projected_scores:
+        return None
+
+    projection_week = str(int(data.get("current_week") or 0))
+    if projection_week == "0":
+        return None
+
+    projected_weeks = {
+        str(week_number): {
+            str(team_name): float(score)
+            for team_name, score in week_scores.items()
+        }
+        for week_number, week_scores in data.get("weeks", {}).items()
+    }
+    projected_weeks[projection_week] = {
+        str(team_name): float(score)
+        for team_name, score in projected_scores.items()
+    }
+
+    projected_week_numbers = sorted(
+        projected_weeks.keys(),
+        key=lambda value: int(value),
+    )
+
+    projected_yahoo_teams = deepcopy(data.get("yahoo_teams", {}))
+    for matchup in data.get("matchups", []):
+        matchup_teams = matchup.get("teams", [])
+        if len(matchup_teams) < 2:
+            continue
+        first, second = matchup_teams[0], matchup_teams[1]
+        for team, opponent in ((first, second), (second, first)):
+            team_name = str(team.get("name") or "")
+            if not team_name:
+                continue
+            projected_yahoo_teams.setdefault(team_name, {"weekly_results": {}})
+            projected_yahoo_teams[team_name].setdefault("weekly_results", {})[
+                projection_week
+            ] = _projection_result_for_team(matchup, team, opponent)
+
+    projected_weekly_mamba_points = {
+        str(week_number): dict(values)
+        for week_number, values in data.get("weekly_mamba_points", {}).items()
+    }
+    projected_weekly_mamba_points[projection_week] = calculate_weekly_mamba_points(
+        projected_weeks[projection_week]
+    )
+
+    return {
+        "week_numbers": projected_week_numbers,
+        "weeks": projected_weeks,
+        "yahoo_teams": projected_yahoo_teams,
+        "weekly_mamba_points": projected_weekly_mamba_points,
+    }
+
+
 def _build_trade_activity_leaders(
     trades: List[Dict[str, Any]],
     limit: int = 5,
@@ -134,6 +212,7 @@ def live_dashboard_home(
     request: Request,
     season: Optional[int] = Query(default=None, ge=2000, le=2100),
     week: Optional[int] = Query(default=None, ge=1, le=18),
+    view: str = Query(default="actual"),
 ):
     selected_season = season if season is not None else _latest_available_season(request)
     data = load_cached_yahoo_dashboard_data(
@@ -171,6 +250,16 @@ def live_dashboard_home(
     trades = trade_state.get("trades", []) if isinstance(trade_state.get("trades"), list) else []
     trade_activity_leaders = _build_trade_activity_leaders(trades, limit=5)
 
+    projection_state = _build_projected_dashboard_state(data)
+    projection_enabled = bool(
+        hybrid_scoring_enabled
+        and projection_state
+        and data.get("projection_available")
+        and selected_season == current_calendar_season
+        and int(data.get("current_week") or 0) <= standings_end_week
+    )
+    view_mode = "projected" if view.lower() == "projected" and projection_enabled else "actual"
+
     common_context = {
         "request": request,
         "page_title": "Mamba Fantasy",
@@ -194,6 +283,10 @@ def live_dashboard_home(
         "live_refresh_requested_week": week,
         "hybrid_scoring_enabled": hybrid_scoring_enabled,
         "standings_end_week": standings_end_week,
+        "view_mode": view_mode,
+        "projection_enabled": projection_enabled,
+        "projection_week": int(data.get("current_week") or 0),
+        "actual_through_week": int(data.get("actual_through_week") or data.get("current_week") or 0),
         "team_logos_by_name": team_logos_by_name,
         "trades": trades,
         "trade_activity_leaders": trade_activity_leaders,
@@ -211,9 +304,16 @@ def live_dashboard_home(
             {**common_context, "matchups": data.get("matchups", [])},
         )
 
-    week_numbers = data["week_numbers"]
-    weeks = data["weeks"]
-    yahoo_teams = data["yahoo_teams"]
+    if view_mode == "projected" and projection_state:
+        week_numbers = projection_state["week_numbers"]
+        weeks = projection_state["weeks"]
+        yahoo_teams = projection_state["yahoo_teams"]
+        weekly_mamba_points = projection_state["weekly_mamba_points"]
+    else:
+        week_numbers = data["week_numbers"]
+        weeks = data["weeks"]
+        yahoo_teams = data["yahoo_teams"]
+        weekly_mamba_points = data["weekly_mamba_points"]
 
     yahoo_rows, yahoo_ranks = build_yahoo_snapshot(
         yahoo_teams=yahoo_teams,
@@ -241,7 +341,6 @@ def live_dashboard_home(
             },
         )
 
-    weekly_mamba_points = data["weekly_mamba_points"]
     standings = build_hybrid_standings(
         weeks=weeks,
         yahoo_ranks=yahoo_ranks,

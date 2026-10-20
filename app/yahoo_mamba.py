@@ -84,6 +84,9 @@ def _team_from_resource(team_resource: Any) -> Optional[Dict[str, Any]]:
     points_node = _first_value_for_key(team_resource, "team_points")
     points_fields = _scalar_map(points_node)
 
+    projected_points_node = _first_value_for_key(team_resource, "team_projected_points")
+    projected_points_fields = _scalar_map(projected_points_node)
+
     standings_node = _first_value_for_key(team_resource, "team_standings")
     standings_fields = _scalar_map(standings_node)
 
@@ -95,6 +98,7 @@ def _team_from_resource(team_resource: Any) -> Optional[Dict[str, Any]]:
         "team_id": fields.get("team_id"),
         "name": fields.get("name") or "Unnamed Yahoo Team",
         "score": _as_float(points_fields.get("total")),
+        "projected_score": _as_float(projected_points_fields.get("total")),
         "rank": standings_fields.get("rank"),
         "wins": outcome_fields.get("wins"),
         "losses": outcome_fields.get("losses"),

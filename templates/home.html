@@ -67,6 +67,24 @@
     </div>
 </section>
 
+{% if projection_enabled %}
+<div class="projection-mode-wrap">
+    <div class="projection-mode-toggle" role="group" aria-label="Standings view">
+        <a class="projection-mode-option {% if view_mode == 'actual' %}is-active{% endif %}" href="/?season={{ season }}&week={{ current_week }}&view=actual#hybrid-standings">Actual</a>
+        <a class="projection-mode-option {% if view_mode == 'projected' %}is-active{% endif %}" href="/?season={{ season }}&week={{ current_week }}&view=projected#hybrid-standings">Projected</a>
+    </div>
+    <span class="projection-mode-note">
+        {% if view_mode == 'projected' %}
+        If Yahoo's Week {{ projection_week }} projections hold.
+        {% elif actual_through_week < projection_week %}
+        Actual standings through Week {{ actual_through_week }} · Week {{ projection_week }} projections available.
+        {% else %}
+        Switch to projected to see where the league would finish if current Yahoo projections hold.
+        {% endif %}
+    </span>
+</div>
+{% endif %}
+
 <section id="hybrid-standings" class="dashboard-section">
     <div class="section-heading"><div><p class="section-kicker section-kicker-gold">League Dashboard</p><h2>Hybrid Standings</h2><p class="section-description">Swipe or scroll sideways to view all values. Rank, Team, and Hybrid remain frozen.</p>{{ table_nav("hybrid") }}</div><div class="week-pill">Week {{ current_week }}</div></div>
     <div class="standings-card table-card"><div class="table-scroll"><table class="data-table hybrid-table">

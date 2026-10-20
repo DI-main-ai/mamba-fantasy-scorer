@@ -116,6 +116,7 @@ def build_period_selector(
     selected_week: int,
     selected_season: int,
     available_weeks: Iterable[int],
+    status_text: Optional[str] = None,
 ) -> str:
     clean_weeks = _clean_available_weeks(available_weeks, selected_week)
     week_options = "".join(
@@ -162,7 +163,7 @@ def build_period_selector(
                 </button>
             </form>
             <span class="updated-label">
-                Through Week {selected_week}
+                {status_text or f"Through Week {selected_week}"}
             </span>
             <span class="period-season-note" id="period-season-note">
                 Loading Yahoo league seasons…
@@ -248,8 +249,11 @@ class HistoricalWeekSelectorMiddleware(BaseHTTPMiddleware):
         body = b"".join([chunk async for chunk in response.body_iterator])
         html = body.decode("utf-8")
 
+        # The hero status can say "Through Week", "Actual through Week",
+        # or "Projected through Week". Resolve the selected week from the
+        # header instead so the period selector survives all display modes.
         week_match = re.search(
-            r'<span class="updated-label">\s*Through Week (\d+)\s*</span>',
+            r'<span class="week-label">\s*Week (\d+)\s*</span>',
             html,
         )
         if week_match is None:
@@ -261,6 +265,15 @@ class HistoricalWeekSelectorMiddleware(BaseHTTPMiddleware):
             )
 
         selected_week = int(week_match.group(1))
+        status_match = re.search(
+            r'<span class="updated-label">\s*([^<]+?)\s*</span>',
+            html,
+        )
+        status_text = (
+            re.sub(r"\s+", " ", status_match.group(1)).strip()
+            if status_match is not None
+            else f"Through Week {selected_week}"
+        )
         season_param = request.query_params.get("season")
 
         if season_param is not None:
@@ -313,13 +326,15 @@ class HistoricalWeekSelectorMiddleware(BaseHTTPMiddleware):
             selected_week,
             selected_season,
             available_weeks,
+            status_text=status_text,
         )
 
         html = re.sub(
-            r'<span class="updated-label">\s*Through Week \d+\s*</span>',
+            r'<span class="updated-label">.*?</span>',
             selector,
             html,
             count=1,
+            flags=re.DOTALL,
         )
         html = html.replace(
             "</head>",

@@ -15,6 +15,7 @@
     <link rel="stylesheet" href="{{ url_for('static', path='css/audit-scroll.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', path='css/team-logos.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', path='css/matchup-detail.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', path='css/projections.css') }}?v=20261020-projections-v1">
     <link rel="stylesheet" href="{{ url_for('static', path='css/scoring-log.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', path='css/trades.css') }}?v=20261001-mobile-leaderboard">
     <link rel="stylesheet" href="{{ url_for('static', path='css/navigation-grid.css') }}">
@@ -77,14 +78,14 @@
                                 {% if first.logo_url %}<img class="matchup-team-logo" src="{{ first.logo_url }}" alt="{{ first.name }} logo" loading="lazy">{% endif %}
                                 <span class="matchup-team-name">{{ first.name }}</span>
                             </span>
-                            <span class="matchup-score">{% if first.score is not none %}{{ "%.2f" | format(first.score) }}{% else %}—{% endif %}</span>
+                            <span class="matchup-score"><span>{% if first.score is not none %}{{ "%.2f" | format(first.score) }}{% else %}—{% endif %}</span>{% if projection_enabled and first.projected_score is not none %}<small class="matchup-projection">(Proj {{ "%.2f" | format(first.projected_score) }})</small>{% endif %}</span>
                         </div>
                         <div class="matchup-team-row {% if second_won %}matchup-winner{% endif %}">
                             <span class="matchup-team-identity">
                                 {% if second.logo_url %}<img class="matchup-team-logo" src="{{ second.logo_url }}" alt="{{ second.name }} logo" loading="lazy">{% endif %}
                                 <span class="matchup-team-name">{{ second.name }}</span>
                             </span>
-                            <span class="matchup-score">{% if second.score is not none %}{{ "%.2f" | format(second.score) }}{% else %}—{% endif %}</span>
+                            <span class="matchup-score"><span>{% if second.score is not none %}{{ "%.2f" | format(second.score) }}{% else %}—{% endif %}</span>{% if projection_enabled and second.projected_score is not none %}<small class="matchup-projection">(Proj {{ "%.2f" | format(second.projected_score) }})</small>{% endif %}</span>
                         </div>
                         <div class="matchup-card-action">View lineup &amp; player points →</div>
                     </a>

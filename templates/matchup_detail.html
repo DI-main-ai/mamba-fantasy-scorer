@@ -23,7 +23,10 @@
                     <div class="lineup-team-name">{{ team.name }}</div>
                 </div>
                 <div class="lineup-team-score">
-                    {% if team.score is not none %}{{ "%.2f" | format(team.score) }}{% else %}—{% endif %}
+                    <span>{% if team.score is not none %}{{ "%.2f" | format(team.score) }}{% else %}—{% endif %}</span>
+                    {% if projection_enabled and team.projected_score is not none %}
+                    <small class="lineup-team-projection">(Proj {{ "%.2f" | format(team.projected_score) }})</small>
+                    {% endif %}
                 </div>
             </div>
 

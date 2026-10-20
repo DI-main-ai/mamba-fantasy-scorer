@@ -21,7 +21,7 @@ from app.yahoo_shared_auth import _upstash_command, _upstash_config
 
 matchup_detail_router = APIRouter(tags=["yahoo-matchup-detail"])
 
-DETAIL_CACHE_PREFIX = "mamba:yahoo:matchup-detail:v2"
+DETAIL_CACHE_PREFIX = "mamba:yahoo:matchup-detail:v3"
 LIVE_DETAIL_REFRESH_SECONDS = 45
 IDLE_DETAIL_REFRESH_SECONDS = 300
 HISTORICAL_DETAIL_CACHE_SECONDS = 604800
@@ -206,6 +206,7 @@ def _load_team_roster(
         "name": str(team.get("name") or "Yahoo Team"),
         "logo_url": team.get("logo_url") or "",
         "score": team.get("score"),
+        "projected_score": team.get("projected_score"),
         "starters": starters,
         "bench": bench,
     }
@@ -244,6 +245,10 @@ def matchup_detail(
         LIVE_DETAIL_REFRESH_SECONDS if is_live_scoring else IDLE_DETAIL_REFRESH_SECONDS
     )
     matchup_auto_refresh_enabled = is_current_latest_week
+    projection_enabled = bool(
+        is_current_latest_week
+        and dashboard.get("projection_available")
+    )
 
     # Expire current-week player detail shortly before the page's next refresh so
     # a reload gets fresh Yahoo player points. Historical matchup details remain
@@ -307,6 +312,7 @@ def matchup_detail(
             "matchup_status": str(selected_matchup.get("status") or ""),
             "matchup_auto_refresh_enabled": matchup_auto_refresh_enabled,
             "matchup_refresh_seconds": matchup_refresh_seconds,
+            "projection_enabled": projection_enabled,
             "back_url": f"/?season={season}&week={week}#weekly-matchups",
         },
     )

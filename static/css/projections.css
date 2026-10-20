@@ -108,3 +108,89 @@
 .projection-current-cell {
     font-style: italic;
 }
+
+
+/* Projected mode gets its own cool/navy palette so it cannot be mistaken for
+   the official actual standings view. */
+.projected-mode {
+    background:
+        radial-gradient(
+            circle at top left,
+            rgba(63, 111, 173, 0.20),
+            transparent 38%
+        ),
+        #0a1019;
+}
+
+.projected-mode .site-header {
+    background: rgba(10, 16, 25, 0.90);
+    border-bottom-color: rgba(112, 154, 207, 0.14);
+}
+
+.projection-title {
+    font-style: italic;
+}
+
+.projected-mode .projection-table-card {
+    border-color: rgba(99, 143, 198, 0.30);
+    background: #111a27;
+    box-shadow: 0 16px 45px rgba(1, 8, 18, 0.30);
+}
+
+.projected-mode .projection-table-card .data-table td {
+    background: #111a27;
+}
+
+.projected-mode .projection-table-card .data-table th {
+    background: #172334;
+    color: #8293aa;
+}
+
+.projected-mode .projection-table-card .hybrid-rank-sticky,
+.projected-mode .projection-table-card .hybrid-team-sticky,
+.projected-mode .projection-table-card .hybrid-value-sticky,
+.projected-mode .projection-table-card .audit-team-sticky,
+.projected-mode .projection-table-card .audit-total-sticky {
+    background: #131e2d !important;
+}
+
+.projected-mode .projection-table-card thead .hybrid-rank-sticky,
+.projected-mode .projection-table-card thead .hybrid-team-sticky,
+.projected-mode .projection-table-card thead .hybrid-value-sticky,
+.projected-mode .projection-table-card thead .audit-team-sticky,
+.projected-mode .projection-table-card thead .audit-total-sticky {
+    background: #192638 !important;
+}
+
+.projected-mode .projection-table-card .data-table tbody tr:hover td {
+    background: #182538;
+}
+
+.projected-mode .projection-table-card .first-place-row td {
+    background:
+        linear-gradient(
+            90deg,
+            rgba(64, 117, 184, 0.20),
+            rgba(64, 117, 184, 0.035)
+        );
+}
+
+.projected-mode .projection-table-card .first-place-row .hybrid-rank-sticky,
+.projected-mode .projection-table-card .first-place-row .hybrid-team-sticky,
+.projected-mode .projection-table-card .first-place-row .hybrid-value-sticky {
+    background: #192638 !important;
+}
+
+.projected-mode .projection-table-card .audit-leader-row td {
+    background:
+        linear-gradient(
+            90deg,
+            rgba(64, 117, 184, 0.18),
+            rgba(64, 117, 184, 0.025)
+        );
+}
+
+.projected-mode .projection-table-card .audit-leader-row .audit-team-sticky,
+.projected-mode .projection-table-card .audit-leader-row .audit-total-sticky {
+    background: #182536 !important;
+}

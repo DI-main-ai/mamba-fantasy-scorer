@@ -279,7 +279,8 @@ def live_dashboard_home(
         "yahoo_refresh_stale": bool(refresh_meta.get("stale")),
         "yahoo_refresh_error": refresh_meta.get("error"),
         "live_refresh_enabled": (
-            selected_season == current_calendar_season and week is None
+            selected_season == current_calendar_season
+            and int(data.get("current_week") or 0) == int(data.get("maximum_week") or 0)
         ),
         "live_refresh_requested_week": week,
         "hybrid_scoring_enabled": hybrid_scoring_enabled,

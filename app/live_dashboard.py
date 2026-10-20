@@ -256,6 +256,7 @@ def live_dashboard_home(
         and projection_state
         and data.get("projection_available")
         and selected_season == current_calendar_season
+        and int(data.get("current_week") or 0) == int(data.get("maximum_week") or 0)
         and int(data.get("current_week") or 0) <= standings_end_week
     )
     view_mode = "projected" if view.lower() == "projected" and projection_enabled else "actual"

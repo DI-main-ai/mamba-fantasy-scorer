@@ -194,3 +194,18 @@
 .projected-mode .projection-table-card .audit-leader-row .audit-total-sticky {
     background: #182536 !important;
 }
+
+/* Three views fit smaller screens without hiding labels. */
+.projection-mode-toggle { flex-wrap: wrap; }
+.ros-summary { padding: 20px; margin: 0 0 24px; border: 1px solid #3e587c; border-radius: 14px; background: #101f34; color: #e5edf7; }
+.ros-summary p { line-height: 1.6; }
+.ros-summary a { color: #9bc8ff; }
+.ros-summary details { margin-top: 12px; }
+.ros-summary summary { cursor: pointer; padding: 8px 0; font-weight: 700; }
+.ros-lineup-grid { display: grid; grid-template-columns: repeat(auto-fit,minmax(260px,1fr)); gap: 12px; }
+.ros-team { padding: 12px; background: #152940; border-radius: 10px; }
+.ros-team table { width: 100%; border-collapse: collapse; }
+.ros-team td { padding: 5px; font-size: 13px; }
+.ros-team td:last-child { text-align: right; }
+.ros-warning { color: #ffd58a; }
+@media(max-width:620px) { .projection-mode-option { flex: 1 1 auto; text-align: center; white-space: normal; } }

@@ -15,12 +15,12 @@
     <link rel="stylesheet" href="{{ url_for('static', path='css/audit-scroll.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', path='css/team-logos.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', path='css/matchup-detail.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', path='css/projections.css') }}?v=20261020-projections-v3">
+    <link rel="stylesheet" href="{{ url_for('static', path='css/projections.css') }}?v=20261029-ros-v1">
     <link rel="stylesheet" href="{{ url_for('static', path='css/scoring-log.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', path='css/trades.css') }}?v=20261001-mobile-leaderboard">
     <link rel="stylesheet" href="{{ url_for('static', path='css/navigation-grid.css') }}">
 </head>
-<body{% if view_mode == 'projected' %} class="projected-mode"{% endif %}>
+<body{% if view_mode in ['projected', 'ros'] %} class="projected-mode"{% endif %}>
     <header class="site-header">
         <div class="header-content">
             <a class="brand" href="/">

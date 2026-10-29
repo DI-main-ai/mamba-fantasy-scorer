@@ -5,6 +5,8 @@ import threading
 import os
 import time
 import urllib.parse
+import urllib.request
+import urllib.error
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
@@ -12,7 +14,7 @@ from fastapi import APIRouter, HTTPException, Query
 from fastapi.responses import JSONResponse
 from starlette.requests import Request as StarletteRequest
 
-from app.yahoo_auth import _fantasy_get
+from app.yahoo_auth import _fantasy_get, _get_access_token, _refresh_access_token
 from app.yahoo_dashboard import _extract_team_logo_urls
 from app.yahoo_mamba import (
     _extract_unique_teams,
@@ -355,6 +357,27 @@ def _projected_points(payload: Dict[str, Any], player_key: str, week: int) -> Op
     return None
 
 
+def _projection_get(request: StarletteRequest, path: str) -> Dict[str, Any]:
+    """Yahoo's projection host, using the same league OAuth authorization."""
+    token = _get_access_token(request)
+    url = "https://pub-api-ro.fantasysports.yahoo.com/fantasy/v2/" + path + "?format=json"
+    for attempt in range(2):
+        upstream = urllib.request.Request(url, headers={
+            "Authorization": f"Bearer {token}", "Accept": "application/json",
+        })
+        try:
+            with urllib.request.urlopen(upstream, timeout=20) as response:
+                return json.loads(response.read().decode("utf-8"))
+        except urllib.error.HTTPError as exc:
+            if exc.code == 401 and attempt == 0:
+                token = _refresh_access_token(request)
+                continue
+            raise HTTPException(status_code=502, detail=f"Yahoo projection request failed ({exc.code}).") from exc
+        except (urllib.error.URLError, TimeoutError, ValueError) as exc:
+            raise HTTPException(status_code=502, detail="Yahoo projection request failed.") from exc
+    raise HTTPException(status_code=502, detail="Yahoo projection request failed.")
+
+
 @roster_snapshot_router.get("/api/player-projection", response_class=JSONResponse)
 def player_projection(
     player_key: str = Query(..., pattern=r"^[0-9]+\.p\.[0-9]+$"),
@@ -384,7 +407,7 @@ def player_projection(
             f"/stats;type=week;week={week};show_projected_stats=1"
         )
         try:
-            payload = _fantasy_get(_server_request(), path)
+            payload = _projection_get(_server_request(), path)
         except HTTPException as exc:
             # Do not expose upstream response bodies or authentication details.
             status = 401 if exc.status_code == 401 else 502

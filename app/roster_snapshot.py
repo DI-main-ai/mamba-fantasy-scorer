@@ -1,12 +1,14 @@
 import asyncio
 import json
+import math
+import threading
 import os
 import time
 import urllib.parse
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Query
 from fastapi.responses import JSONResponse
 from starlette.requests import Request as StarletteRequest
 
@@ -329,3 +331,84 @@ def league_roster_snapshot():
             "X-Mamba-Snapshot": "read-only",
         },
     )
+
+
+_projection_cache: Dict[Any, Any] = {}
+_projection_lock = threading.Lock()
+
+
+def _projected_points(payload: Dict[str, Any], player_key: str, week: int) -> Optional[float]:
+    """Accept only Yahoo's projected total for the exact player and week."""
+    for player in _walk_values_for_key(payload, "player"):
+        if str(_scalar_map(player).get("player_key") or "") != player_key:
+            continue
+        for node in _walk_values_for_key(player, "player_projected_points"):
+            fields = _scalar_map(node)
+            if fields.get("coverage_type") != "week" or str(fields.get("week")) != str(week):
+                continue
+            try:
+                value = float(fields["total"])
+            except (KeyError, ValueError, TypeError):
+                continue
+            if math.isfinite(value):
+                return value
+    return None
+
+
+@roster_snapshot_router.get("/api/player-projection", response_class=JSONResponse)
+def player_projection(
+    player_key: str = Query(..., pattern=r"^[0-9]+\.p\.[0-9]+$"),
+    week: int = Query(..., ge=1, le=18),
+):
+    """Test Yahoo's league-specific weekly projection for a rostered player."""
+    snapshot = _read_snapshot()
+    if not snapshot:
+        raise HTTPException(status_code=503, detail="The league roster snapshot is not ready.")
+    league_key = os.getenv("YAHOO_LEAGUE_KEY", "").strip()
+    if not league_key or snapshot.get("league", {}).get("league_key") != league_key:
+        raise HTTPException(status_code=503, detail="The snapshot does not match the configured league.")
+    player = next((
+        player for team in snapshot.get("teams", []) for player in team.get("players", [])
+        if player.get("player_key") == player_key
+    ), None)
+    if player is None:
+        raise HTTPException(status_code=404, detail="Player is not in the current league roster snapshot.")
+
+    cache_key = (league_key, player_key, week)
+    with _projection_lock:
+        cached = _projection_cache.get(cache_key)
+        if cached and time.time() - cached[0] < REFRESH_SECONDS:
+            return JSONResponse(cached[1], headers={"Cache-Control": "no-store"})
+        path = (
+            f"league/{urllib.parse.quote(league_key, safe='.-_')}/players;player_keys={player_key}"
+            f"/stats;type=week;week={week};show_projected_stats=1"
+        )
+        try:
+            payload = _fantasy_get(_server_request(), path)
+        except HTTPException as exc:
+            # Do not expose upstream response bodies or authentication details.
+            status = 401 if exc.status_code == 401 else 502
+            raise HTTPException(status_code=status, detail=(
+                "Yahoo needs to be reconnected on the test site." if status == 401
+                else "Yahoo could not return this player's projection. Try again later."
+            )) from exc
+        returned_league = _league_metadata(payload).get("league_key")
+        if returned_league != league_key:
+            raise HTTPException(status_code=502, detail="Yahoo returned a different league context.")
+        points = _projected_points(payload, player_key, week)
+        now = time.time()
+        result = {
+            "success": True,
+            "source": "Yahoo Fantasy Sports API",
+            "league_key": league_key,
+            "season": snapshot["league"].get("season"),
+            "player_key": player_key,
+            "player_name": player["name"],
+            "week": week,
+            "projected_points": points,
+            "available": points is not None,
+            "scoring": "Yahoo league scoring; total supplied by Yahoo without recalculation",
+            "updated_at": datetime.fromtimestamp(now, tz=timezone.utc).isoformat(),
+        }
+        _projection_cache[cache_key] = (now, result)
+    return JSONResponse(result, headers={"Cache-Control": "no-store"})

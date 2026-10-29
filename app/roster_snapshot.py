@@ -413,7 +413,8 @@ def player_projection(
             status = 401 if exc.status_code == 401 else 502
             raise HTTPException(status_code=status, detail=(
                 "Yahoo needs to be reconnected on the test site." if status == 401
-                else "Yahoo could not return this player's projection. Try again later."
+                else (exc.detail if str(exc.detail).startswith("Yahoo projection request failed")
+                      else "Yahoo could not return this player's projection. Try again later.")
             )) from exc
         returned_league = _league_metadata(payload).get("league_key")
         if returned_league != league_key:

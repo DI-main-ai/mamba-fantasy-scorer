@@ -1,7 +1,5 @@
 <div class="ros-summary">
-    <strong>Rest-of-season forecast · through Week {{ ros_end_week }}</strong>
-    <p>The current week uses Yahoo’s live projections for each team’s actual starting lineup, matching Current Week Projected. Each future week uses the highest-projected legal lineup from each team's current roster, including bench and IR players when Yahoo projects a return. Bye-week players are excluded. No future trades or waiver adds are assumed. Completed weeks retain their actual results.</p>
-    <p>Updated <time class="ros-local-time" datetime="{{ ros_state.updated_at }}">{{ ros_state.updated_at }}</time> · Current-week totals refresh during games (about every 45 seconds while viewing). Future lineups refresh hourly while the service is awake, and after roster changes. <a href="/api/ros-projections" target="_blank" rel="noopener">View projection JSON</a></p>
+    <p>Updated <time class="ros-local-time" datetime="{{ ros_state.updated_at }}">{{ ros_state.updated_at }}</time></p>
     {% if ros_state.stale or ros_state.refresh_error %}<p class="ros-warning">Showing the last successful forecast. {{ ros_state.refresh_error or 'An update is overdue.' }}</p>{% endif %}
     {% if ros_state.warnings %}<details class="ros-warning"><summary>{{ ros_state.warnings|length }} lineup or projection gaps — review assumptions</summary><ul>{% for warning in ros_state.warnings %}<li>{{ warning }}</li>{% endfor %}</ul></details>{% endif %}
     <details><summary>Inspect optimized lineups by week</summary>

@@ -1,4 +1,5 @@
 """Cached, read-only Week 13 forecasts using current rosters and Yahoo projections."""
+from copy import deepcopy
 import asyncio
 import hashlib
 import json
@@ -183,6 +184,38 @@ def build_forecast(roster, settings, scoreboards, projections):
             'warnings': warnings, 'slots': slots}
 
 
+def apply_live_week(forecast, data):
+    """Overlay the same selected-lineup totals used by Current Week Projected.
+
+    Future optimized weeks remain cached; current games never wait for that
+    expensive refresh and are never retrospectively re-optimized.
+    """
+    if not forecast or forecast.get('league_key') != data.get('league_key') or int(forecast.get('season', 0)) != int(data.get('season', 0)):
+        return None
+    from app.live_dashboard import _build_projected_dashboard_state
+    live = _build_projected_dashboard_state(data)
+    if not live:
+        return None
+    result = deepcopy(forecast)
+    current = int(data['current_week'])
+    for week in live['week_numbers']:
+        if int(week) > min(current, END_WEEK):
+            continue
+        key = str(week)
+        result['weeks'][key] = live['weeks'][key]
+        result['weekly_mamba_points'][key] = live['weekly_mamba_points'][key]
+        for name, team in live['yahoo_teams'].items():
+            outcome = team.get('weekly_results', {}).get(key)
+            if outcome is not None:
+                result['yahoo_teams'][name]['weekly_results'][key] = outcome
+        result['lineups'].pop(key, None)
+    result['current_week'] = current
+    result['current_week_scores'] = data.get('projected_scores', {})
+    result['current_week_refresh'] = data.get('_refresh_meta', {})
+    result['stale'] = result.get('stale', False) or bool(result['current_week_refresh'].get('stale'))
+    return result
+
+
 def read_forecast():
     global _memory
     if _memory is None and _upstash_config():
@@ -276,7 +309,11 @@ async def stop_ros_collector():
 
 @router.get('/api/ros-projections')
 def ros_snapshot():
+    from app.yahoo_live_cache import load_cached_yahoo_dashboard_data
     forecast = read_forecast()
+    if forecast:
+        data = load_cached_yahoo_dashboard_data(_server_request(), int(forecast['season']), None)
+        forecast = apply_live_week(forecast, data)
     if not forecast:
         return JSONResponse({'success': False, 'status': 'pending',
                              'message': _last_error or 'Preparing weekly projections and optimized lineups.'}, status_code=503,

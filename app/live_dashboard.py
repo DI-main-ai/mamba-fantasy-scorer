@@ -5,7 +5,7 @@ from typing import Any, Dict, List, Optional
 from fastapi import APIRouter, Query, Request
 from fastapi.responses import HTMLResponse
 
-from app.ros_projection import read_forecast, END_WEEK
+from app.ros_projection import read_forecast, apply_live_week, END_WEEK
 from app.routes import (
     add_previous_week_rank_changes,
     build_mamba_audit_rows,
@@ -263,7 +263,7 @@ def live_dashboard_home(
     view_mode = "projected" if view.lower() == "projected" and projection_enabled else "actual"
 
     ros_enabled = selected_season == current_calendar_season and hybrid_scoring_enabled
-    ros_state = read_forecast() if view.lower() == "ros" and ros_enabled else None
+    ros_state = apply_live_week(read_forecast(), data) if view.lower() == "ros" and ros_enabled else None
     if view.lower() == "ros" and ros_enabled:
         view_mode = "ros"
         if ros_state and (ros_state.get("season") != selected_season or ros_state.get("league_key") != league_key):
@@ -312,7 +312,7 @@ def live_dashboard_home(
     }
 
     if view_mode == "ros":
-        common_context["live_refresh_enabled"] = False
+        common_context["live_refresh_requested_week"] = None
         if not ros_state:
             return templates.TemplateResponse("ros_pending.html", common_context)
 

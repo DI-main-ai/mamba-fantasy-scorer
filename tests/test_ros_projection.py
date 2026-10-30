@@ -117,3 +117,31 @@ def test_render_all_modes(monkeypatch, view):
     if view=='actual': assert '140.00' in response.text and '>W13<' not in response.text
     if view=='projected': assert '155.00' in response.text and '>W13<' not in response.text
     if view=='pending': assert 'Preparing the rest-of-season forecast' in response.text
+
+@pytest.mark.parametrize('live_value,expected', [('118.37',118.37), ('0.00',0.0), (None,100.0)])
+def test_live_team_projection_preferred_without_double_counting(live_value, expected):
+    from app.yahoo_mamba import _team_from_resource
+    resource = [{'team_key':'t1'}, {'team_points':{'total':'21.4'}}, {'team_projected_points':{'total':'100'}}]
+    if live_value is not None:
+        resource.append({'team_live_projected_points':{'total':live_value}})
+    team = _team_from_resource(resource)
+    assert team['projected_score'] == expected
+    assert team['pregame_projected_score'] == 100
+
+
+def test_ros_current_week_changes_results_but_not_future_or_cached_state():
+    state = ros.build_forecast(*fixtures())
+    state.update(league_key='league',season=2026)
+    original = deepcopy(state)
+    data = {'league_key':'league','season':2026,'current_week':8,
+            'projected_scores':{'One':12,'Two':33},
+            'matchups':[{'teams':[{'name':'One','projected_score':12}, {'name':'Two','projected_score':33}]}]}
+    result = ros.apply_live_week(state,data)
+    assert result['weeks']['8'] == {'One':12,'Two':33}
+    assert result['yahoo_teams']['Two']['weekly_results']['8'] == 'W'
+    assert result['weekly_mamba_points']['8'] == {'One':1,'Two':2}
+    assert '8' not in result['lineups']
+    assert result['weeks']['9'] == original['weeks']['9']
+    assert result['lineups']['9'] == original['lineups']['9']
+    assert result['weeks']['7'] == original['weeks']['7']
+    assert state == original

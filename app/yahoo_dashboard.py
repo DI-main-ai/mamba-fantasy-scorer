@@ -166,7 +166,7 @@ def _latest_week_with_data(
     newest_candidate = max(1, min(current_week, end_week))
     for week_number in range(newest_candidate, 0, -1):
         scoreboard_payload = _fantasy_get(
-            request, f"league/{encoded_key}/scoreboard;week={week_number}"
+            request, f"league/{encoded_key}/scoreboard;week={week_number};show_live_projected_points=1"
         )
         matchups = _normalize_matchups(
             _extract_matchups(scoreboard_payload), team_names_by_key
@@ -259,7 +259,7 @@ def load_yahoo_dashboard_data(
 
     if matchup_only:
         scoreboard_payload = _fantasy_get(
-            request, f"league/{encoded_key}/scoreboard;week={selected_week}"
+            request, f"league/{encoded_key}/scoreboard;week={selected_week};show_live_projected_points=1"
         )
         matchups = _normalize_matchups(
             _extract_matchups(scoreboard_payload),
@@ -295,7 +295,7 @@ def load_yahoo_dashboard_data(
 
     for week_number in range(1, actual_through_week + 1):
         scoreboard_payload = _fantasy_get(
-            request, f"league/{encoded_key}/scoreboard;week={week_number}"
+            request, f"league/{encoded_key}/scoreboard;week={week_number};show_live_projected_points=1"
         )
         matchups = _normalize_matchups(
             _extract_matchups(scoreboard_payload),
@@ -356,13 +356,26 @@ def load_yahoo_dashboard_data(
 
     if selected_week > actual_through_week:
         scoreboard_payload = _fantasy_get(
-            request, f"league/{encoded_key}/scoreboard;week={selected_week}"
+            request, f"league/{encoded_key}/scoreboard;week={selected_week};show_live_projected_points=1"
         )
         selected_week_matchups = _normalize_matchups(
             _extract_matchups(scoreboard_payload),
             team_names_by_key,
             team_logos_by_key,
         )
+
+    if int(season) == current_calendar_season and selected_week == current_week:
+        from app.yahoo_live_projections import live_team_totals
+        unfinished = [m for m in selected_week_matchups if str(m.get('status')).lower() not in {'postevent', 'final', 'complete', 'completed'}]
+        if unfinished:
+            totals = live_team_totals(request, league_key, selected_week, set(team_names_by_key))
+            for matchup in unfinished:
+                for team in matchup['teams']:
+                    live = totals[team['team_key']]
+                    team['projected_score'] = live['total']
+                    team['live_projected_score'] = live['total']
+                    team['projection_source'] = 'Yahoo starter player live projections'
+                    team['projection_starters'] = live['starters']
 
     projected_scores: Dict[str, float] = {}
     for matchup in selected_week_matchups:

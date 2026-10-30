@@ -87,6 +87,10 @@ def _team_from_resource(team_resource: Any) -> Optional[Dict[str, Any]]:
     projected_points_node = _first_value_for_key(team_resource, "team_projected_points")
     projected_points_fields = _scalar_map(projected_points_node)
 
+    live_fields = _scalar_map(_first_value_for_key(team_resource, "team_live_projected_points"))
+    live_projection = _as_float(live_fields.get("total"))
+    original_projection = _as_float(projected_points_fields.get("total"))
+
     standings_node = _first_value_for_key(team_resource, "team_standings")
     standings_fields = _scalar_map(standings_node)
 
@@ -98,7 +102,9 @@ def _team_from_resource(team_resource: Any) -> Optional[Dict[str, Any]]:
         "team_id": fields.get("team_id"),
         "name": fields.get("name") or "Unnamed Yahoo Team",
         "score": _as_float(points_fields.get("total")),
-        "projected_score": _as_float(projected_points_fields.get("total")),
+        "projected_score": live_projection if live_projection is not None else original_projection,
+        "pregame_projected_score": original_projection,
+        "live_projected_score": live_projection,
         "rank": standings_fields.get("rank"),
         "wins": outcome_fields.get("wins"),
         "losses": outcome_fields.get("losses"),
@@ -146,6 +152,11 @@ def _extract_matchups(payload: Dict[str, Any]) -> List[Dict[str, Any]]:
         if signature in seen_signatures:
             continue
         seen_signatures.add(signature)
+
+        if str(matchup_fields.get("status")).lower() in {"postevent", "final", "complete", "completed"}:
+            for team in teams:
+                if team.get("score") is not None:
+                    team["projected_score"] = team["score"]
 
         winner_team_key = matchup_fields.get("winner_team_key")
         matchups.append(

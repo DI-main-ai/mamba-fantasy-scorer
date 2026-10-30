@@ -5,6 +5,12 @@ from fastapi.staticfiles import StaticFiles
 from starlette.middleware.sessions import SessionMiddleware
 
 from app.live_dashboard import live_dashboard_router
+from app.roster_snapshot import (
+    roster_snapshot_router,
+    start_roster_snapshot_collector,
+    stop_roster_snapshot_collector,
+)
+from app.ros_projection import router as ros_router, start_ros_collector, stop_ros_collector
 from app.routes import router
 from app.scoring_log import (
     scoring_log_router,
@@ -58,12 +64,16 @@ async def _start_background_collectors() -> None:
     # restarts/deploys do not erase the scoring log or FAAB-change history.
     start_scoring_log_collector()
     start_trade_tracker()
+    start_roster_snapshot_collector()
+    start_ros_collector()
 
 
 @app.on_event("shutdown")
 async def _stop_background_collectors() -> None:
     await stop_scoring_log_collector()
     await stop_trade_tracker()
+    await stop_ros_collector()
+    await stop_roster_snapshot_collector()
 
 
 # Register the multi-season dashboard before the original 2025 route so "/"
@@ -72,6 +82,8 @@ async def _stop_background_collectors() -> None:
 app.include_router(live_dashboard_router)
 app.include_router(matchup_detail_router)
 app.include_router(scoring_log_router)
+app.include_router(roster_snapshot_router)
+app.include_router(ros_router)
 app.include_router(router)
 app.include_router(yahoo_router)
 app.include_router(storage_status_router)

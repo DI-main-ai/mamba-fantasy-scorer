@@ -1,0 +1,21 @@
+<div class="ros-summary">
+    <p>Updated <time class="ros-local-time" datetime="{{ ros_state.updated_at }}">{{ ros_state.updated_at }}</time></p>
+    {% if ros_state.stale or ros_state.refresh_error %}<p class="ros-warning">Showing the last successful forecast. {{ ros_state.refresh_error or 'An update is overdue.' }}</p>{% endif %}
+    {% if ros_state.warnings %}<details class="ros-warning"><summary>{{ ros_state.warnings|length }} lineup or projection gaps — review assumptions</summary><ul>{% for warning in ros_state.warnings %}<li>{{ warning }}</li>{% endfor %}</ul></details>{% endif %}
+    <details><summary>Inspect optimized lineups by week</summary>
+        {% for week, teams in ros_state.lineups.items() %}
+        <details><summary>Week {{ week }}</summary><div class="ros-lineup-grid">
+            {% for team in teams %}<div class="ros-team"><strong>{{ team.team_name }} · {{ '%.2f'|format(team.total) }}</strong><table>
+            {% for starter in team.starters %}<tr><td>{{ starter.slot }}</td><td>{{ starter.player.name if starter.player else 'No eligible player' }}</td><td>{{ '%.2f'|format(starter.player.projected_points) if starter.player else '—' }}</td></tr>{% endfor %}
+            </table></div>{% endfor %}
+        </div></details>{% endfor %}
+    </details>
+</div>
+<script>
+document.querySelectorAll('.ros-local-time').forEach(el => { el.textContent = new Date(el.dateTime).toLocaleString(); });
+setInterval(async () => {
+    try { const r = await fetch('/api/ros-projections'); if (!r.ok) return; const d = await r.json();
+        if (d.updated_at !== {{ ros_state.updated_at|tojson }}) location.reload();
+    } catch (_) {}
+}, 60000);
+</script>

@@ -5,6 +5,7 @@ from typing import Any, Dict, List, Optional
 from fastapi import APIRouter, Query, Request
 from fastapi.responses import HTMLResponse
 
+from app.ros_projection import read_forecast, apply_live_week, END_WEEK
 from app.routes import (
     add_previous_week_rank_changes,
     build_mamba_audit_rows,
@@ -216,7 +217,7 @@ def live_dashboard_home(
 ):
     selected_season = season if season is not None else _latest_available_season(request)
     data = load_cached_yahoo_dashboard_data(
-        request=request, season=selected_season, requested_week=week
+        request=request, season=selected_season, requested_week=None if view.lower() == "ros" else week
     )
 
     refresh_meta = data.get("_refresh_meta", {})
@@ -261,6 +262,13 @@ def live_dashboard_home(
     )
     view_mode = "projected" if view.lower() == "projected" and projection_enabled else "actual"
 
+    ros_enabled = selected_season == current_calendar_season and hybrid_scoring_enabled
+    ros_state = apply_live_week(read_forecast(), data) if view.lower() == "ros" and ros_enabled else None
+    if view.lower() == "ros" and ros_enabled:
+        view_mode = "ros"
+        if ros_state and (ros_state.get("season") != selected_season or ros_state.get("league_key") != league_key):
+            ros_state = None
+
     common_context = {
         "request": request,
         "page_title": "Mamba Fantasy",
@@ -286,6 +294,9 @@ def live_dashboard_home(
         "hybrid_scoring_enabled": hybrid_scoring_enabled,
         "standings_end_week": standings_end_week,
         "view_mode": view_mode,
+        "ros_enabled": ros_enabled,
+        "ros_state": ros_state,
+        "ros_end_week": END_WEEK,
         "projection_enabled": projection_enabled,
         "projection_week": int(data.get("current_week") or 0),
         "actual_through_week": int(data.get("actual_through_week") or data.get("current_week") or 0),
@@ -300,13 +311,23 @@ def live_dashboard_home(
         "show_trades_section": bool(trades) or selected_season == current_calendar_season,
     }
 
-    if data["mode"] == "matchups":
+    if view_mode == "ros":
+        common_context["live_refresh_requested_week"] = None
+        if not ros_state:
+            return templates.TemplateResponse("ros_pending.html", common_context)
+
+    if data["mode"] == "matchups" and view_mode != "ros":
         return templates.TemplateResponse(
             "matchups.html",
             {**common_context, "matchups": data.get("matchups", [])},
         )
 
-    if view_mode == "projected" and projection_state:
+    if view_mode == "ros" and ros_state:
+        week_numbers = ros_state["week_numbers"]
+        weeks = ros_state["weeks"]
+        yahoo_teams = ros_state["yahoo_teams"]
+        weekly_mamba_points = ros_state["weekly_mamba_points"]
+    elif view_mode == "projected" and projection_state:
         week_numbers = projection_state["week_numbers"]
         weeks = projection_state["weeks"]
         yahoo_teams = projection_state["yahoo_teams"]
@@ -384,6 +405,6 @@ def live_dashboard_home(
             "points_for_rows": points_for_rows,
             "mamba_rows": mamba_rows,
             "matchups": data.get("matchups", []),
-            "show_bottom_matchups": True,
+            "show_bottom_matchups": view_mode != "ros",
         },
     )

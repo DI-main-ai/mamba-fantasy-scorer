@@ -194,3 +194,107 @@
 .projected-mode .projection-table-card .audit-leader-row .audit-total-sticky {
     background: #182536 !important;
 }
+
+/* Three views fit smaller screens without hiding labels. */
+.projection-mode-toggle { flex-wrap: wrap; }
+.ros-summary { padding: 20px; margin: 0 0 24px; border: 1px solid #3e587c; border-radius: 14px; background: #101f34; color: #e5edf7; }
+.ros-summary p { line-height: 1.6; }
+.ros-summary a { color: #9bc8ff; }
+.ros-summary details { margin-top: 12px; }
+.ros-summary summary { cursor: pointer; padding: 8px 0; font-weight: 700; }
+.ros-lineup-grid { display: grid; grid-template-columns: repeat(auto-fit,minmax(260px,1fr)); gap: 12px; }
+.ros-team { padding: 12px; background: #152940; border-radius: 10px; }
+.ros-team table { width: 100%; border-collapse: collapse; }
+.ros-team td { padding: 5px; font-size: 13px; }
+.ros-team td:last-child { text-align: right; }
+.ros-warning { color: #ffd58a; }
+@media(max-width:620px) { .projection-mode-option { flex: 1 1 auto; text-align: center; white-space: normal; } }
+
+/* ROS mirrors the projected palette in warm yellow/gold. */
+.ros-mode {
+    background:
+        radial-gradient(
+            circle at top left,
+            rgba(210, 174, 58, 0.20),
+            transparent 38%
+        ),
+        #17150c;
+}
+
+.ros-mode .site-header {
+    background: rgba(23, 21, 12, 0.90);
+    border-bottom-color: rgba(220, 191, 94, 0.14);
+}
+
+.projection-title {
+    font-style: italic;
+}
+
+.ros-mode .projection-table-card {
+    border-color: rgba(194, 162, 67, 0.30);
+    background: #211e12;
+    box-shadow: 0 16px 45px rgba(14, 11, 2, 0.30);
+}
+
+.ros-mode .projection-table-card .data-table td {
+    background: #211e12;
+}
+
+.ros-mode .projection-table-card .data-table th {
+    background: #2c2716;
+    color: #b6a77c;
+}
+
+.ros-mode .projection-table-card .hybrid-rank-sticky,
+.ros-mode .projection-table-card .hybrid-team-sticky,
+.ros-mode .projection-table-card .hybrid-value-sticky,
+.ros-mode .projection-table-card .audit-team-sticky,
+.ros-mode .projection-table-card .audit-total-sticky {
+    background: #252113 !important;
+}
+
+.ros-mode .projection-table-card thead .hybrid-rank-sticky,
+.ros-mode .projection-table-card thead .hybrid-team-sticky,
+.ros-mode .projection-table-card thead .hybrid-value-sticky,
+.ros-mode .projection-table-card thead .audit-team-sticky,
+.ros-mode .projection-table-card thead .audit-total-sticky {
+    background: #332c17 !important;
+}
+
+.ros-mode .projection-table-card .data-table tbody tr:hover td {
+    background: #322c19;
+}
+
+.ros-mode .projection-table-card .first-place-row td {
+    background:
+        linear-gradient(
+            90deg,
+            rgba(207, 172, 56, 0.20),
+            rgba(207, 172, 56, 0.035)
+        );
+}
+
+.ros-mode .projection-table-card .first-place-row .hybrid-rank-sticky,
+.ros-mode .projection-table-card .first-place-row .hybrid-team-sticky,
+.ros-mode .projection-table-card .first-place-row .hybrid-value-sticky {
+    background: #332c17 !important;
+}
+
+.ros-mode .projection-table-card .audit-leader-row td {
+    background:
+        linear-gradient(
+            90deg,
+            rgba(207, 172, 56, 0.18),
+            rgba(207, 172, 56, 0.025)
+        );
+}
+
+.ros-mode .projection-table-card .audit-leader-row .audit-team-sticky,
+.ros-mode .projection-table-card .audit-leader-row .audit-total-sticky {
+    background: #302a17 !important;
+}
+
+
+.ros-mode .ros-summary { border-color: #66582c; background: #242011; color: #f3edd9; }
+.ros-mode .ros-team { background: #302918; }
+.ros-mode .ros-summary a { color: #ecd078; }

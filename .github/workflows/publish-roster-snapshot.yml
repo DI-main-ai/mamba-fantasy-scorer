@@ -1,0 +1,106 @@
+name: Publish league roster snapshot
+
+on:
+  push:
+    branches:
+      - feature/week-selector
+    paths-ignore:
+      - league-rosters.json
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: publish-league-roster-snapshot
+  cancel-in-progress: true
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Choose roster source
+        id: source
+        shell: bash
+        run: |
+          if [[ "${GITHUB_REF_NAME}" == "feature/week-selector" ]]; then
+            echo "url=https://mambafantasy-week-selector-test.onrender.com/api/league-rosters" >> "${GITHUB_OUTPUT}"
+          else
+            echo "url=https://mambaleague.onrender.com/api/league-rosters" >> "${GITHUB_OUTPUT}"
+          fi
+
+      - name: Fetch complete roster snapshot
+        shell: bash
+        run: |
+          curl --fail --location --silent --show-error \
+            --retry 8 --retry-delay 10 --retry-all-errors \
+            --max-time 180 \
+            "${{ steps.source.outputs.url }}" \
+            --output /tmp/league-rosters.json
+
+      - name: Validate 14-team snapshot
+        shell: bash
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          path = Path("/tmp/league-rosters.json")
+          data = json.loads(path.read_text(encoding="utf-8"))
+          teams = data.get("teams")
+
+          if data.get("success") is not True:
+              raise SystemExit("Snapshot did not report success=true")
+          if not isinstance(teams, list) or len(teams) != 14:
+              raise SystemExit(f"Expected 14 teams, got {len(teams) if isinstance(teams, list) else 'invalid'}")
+
+          empty = [
+              str(team.get("team_name") or team.get("team_key") or "unknown")
+              for team in teams
+              if not isinstance(team.get("players"), list) or not team["players"]
+          ]
+          if empty:
+              raise SystemExit("Empty rosters: " + ", ".join(empty))
+
+          print(f"Validated {len(teams)} teams and {sum(len(t['players']) for t in teams)} players.")
+          PY
+
+      - name: Publish to roster-snapshot branch
+        shell: bash
+        env:
+          GH_TOKEN: "${{ github.token }}"
+        run: |
+          set -euo pipefail
+          git init /tmp/roster-publish
+          cd /tmp/roster-publish
+          git remote add origin "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          if git ls-remote --exit-code --heads origin roster-snapshot >/dev/null 2>&1; then
+            git fetch --depth=1 origin roster-snapshot
+            git checkout -B roster-snapshot FETCH_HEAD
+          else
+            git checkout --orphan roster-snapshot
+          fi
+
+          cp /tmp/league-rosters.json league-rosters.json
+          printf '%s\n' \
+            '# Mamba League roster snapshot' \
+            '' \
+            'Machine-readable current roster snapshot for trade analysis.' \
+            '' \
+            'Raw JSON: ./league-rosters.json' \
+            > README.md
+
+          git add league-rosters.json README.md
+
+          if git diff --cached --quiet; then
+            echo "No roster snapshot changes to publish."
+            exit 0
+          fi
+
+          git commit -m "Update league roster snapshot"
+          git push origin HEAD:roster-snapshot

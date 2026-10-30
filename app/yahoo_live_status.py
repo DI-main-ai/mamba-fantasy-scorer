@@ -35,4 +35,5 @@ def yahoo_refresh_status(
         "stale": bool(meta.get("stale")),
         "refreshing": bool(meta.get("refreshing")),
         "error": meta.get("error"),
+        "projections": [{key: team.get(key) for key in ("name", "score", "projected_score", "pregame_projected_score", "live_projected_score", "projection_source", "projection_starters")} for matchup in data.get("matchups", []) for team in matchup.get("teams", [])],
     }

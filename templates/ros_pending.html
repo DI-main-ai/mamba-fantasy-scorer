@@ -1,0 +1,13 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="projection-mode-wrap"><div class="projection-mode-toggle" role="group" aria-label="Standings view">
+<a class="projection-mode-option" href="/?season={{ season }}&view=actual">Actual</a>
+<a class="projection-mode-option" href="/?season={{ season }}&view=projected">Current Week Projected</a>
+<a class="projection-mode-option is-active" href="/?season={{ season }}&view=ros">ROS (Week {{ ros_end_week }}) Projected</a>
+</div></div>
+<section class="ros-summary"><h1>Preparing the rest-of-season forecast</h1><p id="ros-status" role="status">Fetching weekly Yahoo projections and optimizing current rosters. This first refresh can take a few minutes.</p><p>Actual and Current Week Projected are available while this loads.</p></section>
+<script>
+async function checkROS() { try { const r = await fetch('/api/ros-projections'); const d = await r.json(); if (r.ok && d.success) location.reload(); else if(d.message) document.getElementById('ros-status').textContent = d.message; } catch (_) {} }
+checkROS(); setInterval(checkROS, 15000);
+</script>
+{% endblock %}

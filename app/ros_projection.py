@@ -209,6 +209,9 @@ def apply_live_week(forecast, data):
             if outcome is not None:
                 result['yahoo_teams'][name]['weekly_results'][key] = outcome
         result['lineups'].pop(key, None)
+    result['projected_weeks'] = [w for w in result['projected_weeks'] if int(w) >= current]
+    result['warnings'] = [warning for warning in result.get('warnings', [])
+                          if not any(warning.startswith(f'Week {w},') for w in range(1, current + 1))]
     result['current_week'] = current
     result['current_week_scores'] = data.get('projected_scores', {})
     result['current_week_refresh'] = data.get('_refresh_meta', {})

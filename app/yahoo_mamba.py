@@ -105,7 +105,6 @@ def _team_from_resource(team_resource: Any) -> Optional[Dict[str, Any]]:
         "projected_score": live_projection if live_projection is not None else original_projection,
         "pregame_projected_score": original_projection,
         "live_projected_score": live_projection,
-        "projection_fields": [key for key in ("team_projected_points", "team_live_projected_points", "team_remaining_projected_points") if _first_value_for_key(team_resource, key) is not None],
         "rank": standings_fields.get("rank"),
         "wins": outcome_fields.get("wins"),
         "losses": outcome_fields.get("losses"),
@@ -153,6 +152,11 @@ def _extract_matchups(payload: Dict[str, Any]) -> List[Dict[str, Any]]:
         if signature in seen_signatures:
             continue
         seen_signatures.add(signature)
+
+        if str(matchup_fields.get("status")).lower() in {"postevent", "final", "complete", "completed"}:
+            for team in teams:
+                if team.get("score") is not None:
+                    team["projected_score"] = team["score"]
 
         winner_team_key = matchup_fields.get("winner_team_key")
         matchups.append(

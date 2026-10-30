@@ -145,3 +145,39 @@ def test_ros_current_week_changes_results_but_not_future_or_cached_state():
     assert result['lineups']['9'] == original['lineups']['9']
     assert result['weeks']['7'] == original['weeks']['7']
     assert state == original
+
+
+def test_completed_matchup_uses_actual_scores_even_if_projection_remains():
+    from app.yahoo_mamba import _extract_matchups
+    teams = [{'team':[{'team_key':key}, {'team_points':{'total':actual}}, {'team_projected_points':{'total':'100'}}, {'team_live_projected_points':{'total':'110'}}]} for key,actual in [('t1','90'),('t2','120')]]
+    result = _extract_matchups({'matchup':{'status':'postevent','week':'8','teams':teams}})
+    assert [t['projected_score'] for t in result[0]['teams']] == [90,120]
+
+@pytest.mark.parametrize('live_value,expected', [('7.71',7.71), ('0.00',0.0), ('-2.00',-2.0), (None,18.55)])
+def test_player_live_projection_and_pregame_fallback(live_value, expected):
+    from app.yahoo_live_projections import player_projection
+    resource = {'player_projected_points':{'0':{'coverage_type':'week','week':'8'},'total':'18.55'},
+                'player_points':{'0':{'coverage_type':'week','week':'8'},'total':'3.68'}}
+    if live_value is not None:
+        resource['player_live_projected_points'] = {'0':{'coverage_type':'week','week':'8'},'total':live_value}
+    assert player_projection(resource,8) == (expected,live_value is not None)
+    with pytest.raises(RuntimeError): player_projection(resource,9)
+
+
+def test_live_totals_only_selected_starters(monkeypatch):
+    from app import yahoo_live_projections as lp
+    def p(key,slot):
+        return {'player':[{'player_key':key}, {'selected_position':{'position':slot}}]}
+    roster={'team':[{'team_key':'t1'}, {'roster':{'week':'8','players':[p('a','QB'),p('b','WR'),p('c','BN'),p('d','IR+')]}}]}
+    monkeypatch.setattr(lp,'_validated',{'league':lp.time.time()})
+    monkeypatch.setattr(lp,'_fantasy_get',lambda *args:roster)
+    def public(path):
+        assert 'player_keys=a,b/' in path
+        return {'league':[{'league_key':ros.SOURCE_LEAGUE},{'players':[
+            {'player':[{'player_key':key},{'player_projected_points':{'0':{'coverage_type':'week','week':'8'},'total':'20'}},
+                       {'player_live_projected_points':{'0':{'coverage_type':'week','week':'8'},'total':points}}]}
+            for key,points in [('a','7.71'),('b','-2.00')]]}]}
+    monkeypatch.setattr(ros,'public_get',public)
+    result=lp.live_team_totals(None,'league',8,{'t1'})
+    assert result['t1']['total']==5.71
+    assert [p['player_key'] for p in result['t1']['starters']]==['a','b']

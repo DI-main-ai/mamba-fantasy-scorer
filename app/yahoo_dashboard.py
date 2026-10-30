@@ -364,6 +364,19 @@ def load_yahoo_dashboard_data(
             team_logos_by_key,
         )
 
+    if int(season) == current_calendar_season and selected_week == current_week:
+        from app.yahoo_live_projections import live_team_totals
+        unfinished = [m for m in selected_week_matchups if str(m.get('status')).lower() not in {'postevent', 'final', 'complete', 'completed'}]
+        if unfinished:
+            totals = live_team_totals(request, league_key, selected_week, set(team_names_by_key))
+            for matchup in unfinished:
+                for team in matchup['teams']:
+                    live = totals[team['team_key']]
+                    team['projected_score'] = live['total']
+                    team['live_projected_score'] = live['total']
+                    team['projection_source'] = 'Yahoo starter player live projections'
+                    team['projection_starters'] = live['starters']
+
     projected_scores: Dict[str, float] = {}
     for matchup in selected_week_matchups:
         for team in matchup.get("teams", []):

@@ -210,20 +210,20 @@
 .ros-warning { color: #ffd58a; }
 @media(max-width:620px) { .projection-mode-option { flex: 1 1 auto; text-align: center; white-space: normal; } }
 
-/* ROS mirrors the projected palette in warm yellow/gold. */
+/* ROS mirrors the projected palette in muted green. */
 .ros-mode {
     background:
         radial-gradient(
             circle at top left,
-            rgba(210, 174, 58, 0.20),
+            rgba(58, 174, 113, 0.20),
             transparent 38%
         ),
-        #17150c;
+        #0c1711;
 }
 
 .ros-mode .site-header {
-    background: rgba(23, 21, 12, 0.90);
-    border-bottom-color: rgba(220, 191, 94, 0.14);
+    background: rgba(12, 23, 17, 0.90);
+    border-bottom-color: rgba(94, 207, 146, 0.14);
 }
 
 .projection-title {
@@ -231,18 +231,18 @@
 }
 
 .ros-mode .projection-table-card {
-    border-color: rgba(194, 162, 67, 0.30);
-    background: #211e12;
-    box-shadow: 0 16px 45px rgba(14, 11, 2, 0.30);
+    border-color: rgba(67, 162, 110, 0.30);
+    background: #122119;
+    box-shadow: 0 16px 45px rgba(2, 14, 8, 0.30);
 }
 
 .ros-mode .projection-table-card .data-table td {
-    background: #211e12;
+    background: #122119;
 }
 
 .ros-mode .projection-table-card .data-table th {
-    background: #2c2716;
-    color: #b6a77c;
+    background: #162c20;
+    color: #7cb699;
 }
 
 .ros-mode .projection-table-card .hybrid-rank-sticky,
@@ -250,7 +250,7 @@
 .ros-mode .projection-table-card .hybrid-value-sticky,
 .ros-mode .projection-table-card .audit-team-sticky,
 .ros-mode .projection-table-card .audit-total-sticky {
-    background: #252113 !important;
+    background: #13251b !important;
 }
 
 .ros-mode .projection-table-card thead .hybrid-rank-sticky,
@@ -258,43 +258,43 @@
 .ros-mode .projection-table-card thead .hybrid-value-sticky,
 .ros-mode .projection-table-card thead .audit-team-sticky,
 .ros-mode .projection-table-card thead .audit-total-sticky {
-    background: #332c17 !important;
+    background: #173324 !important;
 }
 
 .ros-mode .projection-table-card .data-table tbody tr:hover td {
-    background: #322c19;
+    background: #193225;
 }
 
 .ros-mode .projection-table-card .first-place-row td {
     background:
         linear-gradient(
             90deg,
-            rgba(207, 172, 56, 0.20),
-            rgba(207, 172, 56, 0.035)
+            rgba(56, 172, 111, 0.20),
+            rgba(56, 172, 111, 0.035)
         );
 }
 
 .ros-mode .projection-table-card .first-place-row .hybrid-rank-sticky,
 .ros-mode .projection-table-card .first-place-row .hybrid-team-sticky,
 .ros-mode .projection-table-card .first-place-row .hybrid-value-sticky {
-    background: #332c17 !important;
+    background: #173324 !important;
 }
 
 .ros-mode .projection-table-card .audit-leader-row td {
     background:
         linear-gradient(
             90deg,
-            rgba(207, 172, 56, 0.18),
-            rgba(207, 172, 56, 0.025)
+            rgba(56, 172, 111, 0.18),
+            rgba(56, 172, 111, 0.025)
         );
 }
 
 .ros-mode .projection-table-card .audit-leader-row .audit-team-sticky,
 .ros-mode .projection-table-card .audit-leader-row .audit-total-sticky {
-    background: #302a17 !important;
+    background: #173024 !important;
 }
 
 
-.ros-mode .ros-summary { border-color: #66582c; background: #242011; color: #f3edd9; }
-.ros-mode .ros-team { background: #302918; }
-.ros-mode .ros-summary a { color: #ecd078; }
+.ros-mode .ros-summary { border-color: #2c6648; background: #11241a; color: #d9f3e5; }
+.ros-mode .ros-team { background: #183024; }
+.ros-mode .ros-summary a { color: #78ecad; }

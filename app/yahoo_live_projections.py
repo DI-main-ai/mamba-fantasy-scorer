@@ -1,4 +1,7 @@
 """Live current-week totals from Yahoo's player projections in matching scoring."""
+import json
+import urllib.request
+from datetime import datetime, timezone
 import math
 import time
 from concurrent.futures import ThreadPoolExecutor
@@ -12,9 +15,23 @@ _validated = {}
 RESERVES = {'BN', 'IR', 'IR+', 'IL', 'IL+', 'NA'}
 
 
-def player_projection(resource, week):
+def completed_teams(week):
+    year = datetime.now(timezone.utc).year
+    url = f'https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard?dates={year}&seasontype=2&week={week}'
+    with urllib.request.urlopen(url, timeout=20) as response:
+        payload = json.load(response)
+    events = payload.get('events', [])
+    if not events:
+        raise RuntimeError('NFL game status unavailable; retaining the previous dashboard.')
+    return {c['team']['abbreviation'].upper() for e in events if e.get('status', {}).get('type', {}).get('completed')
+            for competition in e.get('competitions', []) for c in competition.get('competitors', [])}
+
+
+def player_projection(resource, week, finished=None):
     # Live is already the projected final total, not remaining points.
-    for key in ('player_live_projected_points', 'player_projected_points'):
+    team = str(_scalar_map(resource).get('editorial_team_abbr') or '').upper()
+    keys = ('player_points',) if team in (finished or set()) else ('player_live_projected_points', 'player_projected_points')
+    for key in keys:
         for node in _walk_values_for_key(resource, key):
             fields = _scalar_map(node)
             if fields.get('coverage_type') != 'week' or str(fields.get('week')) != str(week):
@@ -24,7 +41,7 @@ def player_projection(resource, week):
             except (KeyError, ValueError, TypeError):
                 continue
             if math.isfinite(value):
-                return value, key == 'player_live_projected_points'
+                return value, key in {'player_live_projected_points', 'player_points'}
     raise RuntimeError('Yahoo omitted a starter projection; retaining the previous dashboard.')
 
 
@@ -52,6 +69,7 @@ def live_team_totals(request, league_key, week, expected_keys):
         starters[key] = [p for p in players if p['roster_slot'] not in RESERVES]
     if set(starters) != set(expected_keys):
         raise RuntimeError('Yahoo omitted a team lineup.')
+    finished = completed_teams(week)
     keys = sorted({p['player_key'] for players in starters.values() for p in players})
 
     def batch(batch_keys):
@@ -62,7 +80,7 @@ def live_team_totals(request, league_key, week, expected_keys):
         for resource in _walk_values_for_key(response, 'player'):
             key = str(_scalar_map(resource).get('player_key') or '')
             if key in batch_keys:
-                found[key] = player_projection(resource, week)
+                found[key] = player_projection(resource, week, finished)
         if set(found) != set(batch_keys):
             raise RuntimeError('Yahoo omitted player projections.')
         return found

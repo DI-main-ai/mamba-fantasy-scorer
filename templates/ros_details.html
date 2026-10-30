@@ -1,7 +1,6 @@
 <div class="ros-summary">
     <p>Updated <time class="ros-local-time" datetime="{{ ros_state.updated_at }}">{{ ros_state.updated_at }}</time></p>
     {% if ros_state.stale or ros_state.refresh_error %}<p class="ros-warning">Showing the last successful forecast. {{ ros_state.refresh_error or 'An update is overdue.' }}</p>{% endif %}
-    {% if ros_state.warnings %}<details class="ros-warning"><summary>{{ ros_state.warnings|length }} lineup or projection gaps — review assumptions</summary><ul>{% for warning in ros_state.warnings %}<li>{{ warning }}</li>{% endfor %}</ul></details>{% endif %}
     <details><summary>Inspect optimized lineups by week</summary>
         {% for week, teams in ros_state.lineups.items() %}
         <details><summary>Week {{ week }}</summary><div class="ros-lineup-grid">
@@ -10,6 +9,7 @@
             </table></div>{% endfor %}
         </div></details>{% endfor %}
     </details>
+    {% if ros_state.warnings %}<details class="ros-warning"><summary>{{ ros_state.warnings|length }} lineup or projection gaps — review assumptions</summary><ul>{% for warning in ros_state.warnings %}<li>{{ warning }}</li>{% endfor %}</ul></details>{% endif %}
 </div>
 <script>
 document.querySelectorAll('.ros-local-time').forEach(el => { el.textContent = new Date(el.dateTime).toLocaleString(); });

@@ -169,6 +169,7 @@ def test_live_totals_only_selected_starters(monkeypatch):
     def p(key,slot):
         return {'player':[{'player_key':key}, {'selected_position':{'position':slot}}]}
     roster={'team':[{'team_key':'t1'}, {'roster':{'week':'8','players':[p('a','QB'),p('b','WR'),p('c','BN'),p('d','IR+')]}}]}
+    monkeypatch.setattr(lp,'completed_teams',lambda week:set())
     monkeypatch.setattr(lp,'_validated',{'league':lp.time.time()})
     monkeypatch.setattr(lp,'_fantasy_get',lambda *args:roster)
     def public(path):
@@ -181,3 +182,10 @@ def test_live_totals_only_selected_starters(monkeypatch):
     result=lp.live_team_totals(None,'league',8,{'t1'})
     assert result['t1']['total']==5.71
     assert [p['player_key'] for p in result['t1']['starters']]==['a','b']
+
+@pytest.mark.parametrize('points', ['15.90','0.00','-2.00'])
+def test_finished_player_uses_actual_even_without_live_projection(points):
+    from app.yahoo_live_projections import player_projection
+    p={'editorial_team_abbr':'GB','player_points':{'coverage_type':'week','week':'8','total':points},'player_projected_points':{'coverage_type':'week','week':'8','total':'8.57'}}
+    assert player_projection(p,8,{'GB'}) == (float(points),True)
+    assert player_projection(p,8,set()) == (8.57,False)

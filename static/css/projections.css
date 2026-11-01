@@ -210,20 +210,20 @@
 .ros-warning { color: #ffd58a; }
 @media(max-width:620px) { .projection-mode-option { flex: 1 1 auto; text-align: center; white-space: normal; } }
 
-/* ROS mirrors the projected palette in muted green. */
+/* ROS mirrors the projected palette in muted charcoal and teal. */
 .ros-mode {
     background:
         radial-gradient(
             circle at top left,
-            rgba(58, 174, 113, 0.20),
+            rgba(101, 184, 173, 0.12),
             transparent 38%
         ),
-        #0c1711;
+        #101A1B;
 }
 
 .ros-mode .site-header {
-    background: rgba(12, 23, 17, 0.90);
-    border-bottom-color: rgba(94, 207, 146, 0.14);
+    background: rgba(16, 26, 27, 0.90);
+    border-bottom-color: rgba(101, 184, 173, 0.14);
 }
 
 .projection-title {
@@ -231,18 +231,18 @@
 }
 
 .ros-mode .projection-table-card {
-    border-color: rgba(67, 162, 110, 0.30);
-    background: #122119;
-    box-shadow: 0 16px 45px rgba(2, 14, 8, 0.30);
+    border-color: rgba(101, 184, 173, 0.30);
+    background: #182729;
+    box-shadow: 0 16px 45px rgba(4, 12, 13, 0.30);
 }
 
 .ros-mode .projection-table-card .data-table td {
-    background: #122119;
+    background: #182729;
 }
 
 .ros-mode .projection-table-card .data-table th {
-    background: #162c20;
-    color: #7cb699;
+    background: #203436;
+    color: #8DAEAD;
 }
 
 .ros-mode .projection-table-card .hybrid-rank-sticky,
@@ -250,7 +250,7 @@
 .ros-mode .projection-table-card .hybrid-value-sticky,
 .ros-mode .projection-table-card .audit-team-sticky,
 .ros-mode .projection-table-card .audit-total-sticky {
-    background: #13251b !important;
+    background: #1B2D2F !important;
 }
 
 .ros-mode .projection-table-card thead .hybrid-rank-sticky,
@@ -258,46 +258,46 @@
 .ros-mode .projection-table-card thead .hybrid-value-sticky,
 .ros-mode .projection-table-card thead .audit-team-sticky,
 .ros-mode .projection-table-card thead .audit-total-sticky {
-    background: #173324 !important;
+    background: #243C3D !important;
 }
 
 .ros-mode .projection-table-card .data-table tbody tr:hover td {
-    background: #193225;
+    background: #233A3C;
 }
 
 .ros-mode .projection-table-card .first-place-row td {
     background:
         linear-gradient(
             90deg,
-            rgba(56, 172, 111, 0.20),
-            rgba(56, 172, 111, 0.035)
+            rgba(101, 184, 173, 0.20),
+            rgba(101, 184, 173, 0.035)
         );
 }
 
 .ros-mode .projection-table-card .first-place-row .hybrid-rank-sticky,
 .ros-mode .projection-table-card .first-place-row .hybrid-team-sticky,
 .ros-mode .projection-table-card .first-place-row .hybrid-value-sticky {
-    background: #173324 !important;
+    background: #243C3D !important;
 }
 
 .ros-mode .projection-table-card .audit-leader-row td {
     background:
         linear-gradient(
             90deg,
-            rgba(56, 172, 111, 0.18),
-            rgba(56, 172, 111, 0.025)
+            rgba(101, 184, 173, 0.18),
+            rgba(101, 184, 173, 0.025)
         );
 }
 
 .ros-mode .projection-table-card .audit-leader-row .audit-team-sticky,
 .ros-mode .projection-table-card .audit-leader-row .audit-total-sticky {
-    background: #173024 !important;
+    background: #223839 !important;
 }
 
 
-.ros-mode .ros-summary { border-color: #2c6648; background: #11241a; color: #d9f3e5; }
-.ros-mode .ros-team { background: #183024; }
-.ros-mode .ros-summary a { color: #78ecad; }
+.ros-mode .ros-summary { border-color: #3E6262; background: #142224; color: #E0ECEB; }
+.ros-mode .ros-team { background: #182729; }
+.ros-mode .ros-summary a { color: #65B8AD; }
 
 /* Keep each week's scheduled opponents together, including on mobile. */
 .ros-matchup-list { display: grid; gap: 18px; }

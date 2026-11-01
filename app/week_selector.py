@@ -249,6 +249,15 @@ class HistoricalWeekSelectorMiddleware(BaseHTTPMiddleware):
         body = b"".join([chunk async for chunk in response.body_iterator])
         html = body.decode("utf-8")
 
+        # Projected views have a fixed time horizon, so no historical controls.
+        if re.search(r'<body[^>]*class="[^"]*\\bprojected-mode\\b', html):
+            return Response(
+                content=body,
+                status_code=response.status_code,
+                headers=dict(response.headers),
+                media_type=response.media_type,
+            )
+
         # The hero status can say "Through Week", "Actual through Week",
         # or "Projected through Week". Resolve the selected week from the
         # header instead so the period selector survives all display modes.

@@ -40,9 +40,9 @@
                     {% set nav_current = current_week|int %}
                     {% set previous = nav_weeks|select('lt', nav_current)|list %}
                     {% set following = nav_weeks|select('gt', nav_current)|list %}
-                    {% if previous %}<a class="header-week-arrow" href="/?season={{ season }}&amp;week={{ previous[-1] }}&amp;view=actual" aria-label="Previous week: Week {{ previous[-1] }}" title="Previous week">‹</a>{% endif %}
-                    <span class="week-label">Week {{ current_week }}</span>
-                    {% if following %}<a class="header-week-arrow" href="/?season={{ season }}&amp;week={{ following[0] }}&amp;view=actual" aria-label="Next week: Week {{ following[0] }}" title="Next week">›</a>{% endif %}
+                    {% if previous and view_mode not in ['projected', 'ros'] %}<a class="header-week-arrow" href="/?season={{ season }}&amp;week={{ previous[-1] }}&amp;view=actual" aria-label="Previous week: Week {{ previous[-1] }}" title="Previous week">‹</a>{% endif %}
+                    <span class="week-label">{% if view_mode == 'ros' %}ROS{% else %}Week {{ current_week }}{% endif %}</span>
+                    {% if following and view_mode not in ['projected', 'ros'] %}<a class="header-week-arrow" href="/?season={{ season }}&amp;week={{ following[0] }}&amp;view=actual" aria-label="Next week: Week {{ following[0] }}" title="Next week">›</a>{% endif %}
                     </nav></div>
                 {% if scoring_log_header %}
                 <div id="scoring-log-refresh-status" class="yahoo-refresh-status {% if scoring_log_active %}is-live{% endif %} {% if scoring_log_error %}is-stale{% endif %}">

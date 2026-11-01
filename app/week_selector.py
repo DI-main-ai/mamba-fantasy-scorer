@@ -250,7 +250,7 @@ class HistoricalWeekSelectorMiddleware(BaseHTTPMiddleware):
         html = body.decode("utf-8")
 
         # Projected views have a fixed time horizon, so no historical controls.
-        if re.search(r'<body[^>]*class="[^"]*\\bprojected-mode\\b', html):
+        if re.search(r'<body[^>]*class="[^"]*\bprojected-mode\b', html):
             return Response(
                 content=body,
                 status_code=response.status_code,

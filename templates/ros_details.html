@@ -4,10 +4,16 @@
     {% if ros_state.warnings %}<details class="ros-warning"><summary>{{ ros_state.warnings|length }} lineup or projection gaps — review assumptions</summary><ul>{% for warning in ros_state.warnings %}<li>{{ warning }}</li>{% endfor %}</ul></details>{% endif %}
     <details><summary>Inspect optimized lineups by week</summary>
         {% for week, teams in ros_state.lineups.items() %}
-        <details><summary>Week {{ week }}</summary><div class="ros-lineup-grid">
-            {% for team in teams %}<div class="ros-team"><strong>{{ team.team_name }} · {{ '%.2f'|format(team.total) }}</strong><table>
+        <details><summary>Week {{ week }}</summary><div class="ros-matchup-list">
+            {% for pair in ros_state.matchup_pairs.get(week, []) %}
+            <div class="ros-matchup" role="group" aria-label="Week {{ week }} matchup">
+            {% for team_key in pair %}
+            {% set team = teams|selectattr('team_key', 'equalto', team_key)|first %}
+            {% if not loop.first %}<span class="ros-matchup-vs">VS</span>{% endif %}
+            <div class="ros-team"><strong>{{ team.team_name }} · {{ '%.2f'|format(team.total) }}</strong><table>
             {% for starter in team.starters %}<tr><td>{{ starter.slot }}</td><td>{{ starter.player.name if starter.player else 'No eligible player' }}</td><td>{{ '%.2f'|format(starter.player.projected_points) if starter.player else '—' }}</td></tr>{% endfor %}
             </table></div>{% endfor %}
+            </div>{% endfor %}
         </div></details>{% endfor %}
     </details>
 </div>

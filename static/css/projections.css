@@ -298,3 +298,29 @@
 .ros-mode .ros-summary { border-color: #66582c; background: #242011; color: #f3edd9; }
 .ros-mode .ros-team { background: #302918; }
 .ros-mode .ros-summary a { color: #ecd078; }
+
+/* Keep each week's scheduled opponents together, including on mobile. */
+.ros-matchup-list { display: grid; gap: 18px; }
+.ros-matchup {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+    align-items: start;
+    gap: 10px;
+    padding: 10px;
+    border: 1px solid rgba(196, 179, 123, .35);
+    border-radius: 12px;
+    min-width: 0;
+}
+.ros-matchup .ros-team { min-width: 0; }
+.ros-matchup .ros-team strong { overflow-wrap: anywhere; }
+.ros-matchup-vs {
+    align-self: center;
+    justify-self: center;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .08em;
+    opacity: .7;
+}
+@media (max-width: 700px) {
+    .ros-matchup { grid-template-columns: minmax(0, 1fr); gap: 8px; padding: 8px; }
+}

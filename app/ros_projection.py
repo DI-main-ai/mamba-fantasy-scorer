@@ -25,7 +25,7 @@ from app.scoring import calculate_weekly_mamba_points
 SOURCE_LEAGUE = os.getenv('YAHOO_PROJECTION_LEAGUE_KEY', '470.l.1715444')
 END_WEEK = 13
 REFRESH_SECONDS = 3600
-CACHE_KEY = ROSTER_SNAPSHOT_PREFIX + ':ros:v1'
+CACHE_KEY = ROSTER_SNAPSHOT_PREFIX + ':ros:v2-matchups'
 FINAL_STATUSES = {'postevent', 'final', 'complete', 'completed'}
 router = APIRouter(tags=['rest-of-season'])
 _memory = None
@@ -141,6 +141,7 @@ def build_forecast(roster, settings, scoreboards, projections):
         raise RuntimeError('Team display names must be unique for standings.')
     slots = starting_slots(settings)
     weeks, weekly_mamba, lineups, projected_weeks = {}, {}, {}, []
+    matchup_pairs = {}
     yahoo_teams = {name: {'weekly_results': {}} for name in names.values()}
     warnings = []
     for week in range(1, END_WEEK + 1):
@@ -159,6 +160,7 @@ def build_forecast(roster, settings, scoreboards, projections):
                     scores[names[team['team_key']]] = float(score)
         else:
             projected_weeks.append(week)
+            matchup_pairs[str(week)] = [[t['team_key'] for t in matchup['teams']] for matchup in matchups]
             lineups[str(week)] = []
             for team in teams:
                 players = [{**p, **projections[week][p['player_key']]} for p in team['players']]
@@ -180,7 +182,7 @@ def build_forecast(roster, settings, scoreboards, projections):
         weeks[str(week)] = scores
         weekly_mamba[str(week)] = calculate_weekly_mamba_points(scores)
     return {'week_numbers': list(weeks), 'weeks': weeks, 'weekly_mamba_points': weekly_mamba,
-            'yahoo_teams': yahoo_teams, 'lineups': lineups, 'projected_weeks': projected_weeks,
+            'yahoo_teams': yahoo_teams, 'lineups': lineups, 'matchup_pairs': matchup_pairs, 'projected_weeks': projected_weeks,
             'warnings': warnings, 'slots': slots}
 
 
@@ -209,6 +211,7 @@ def apply_live_week(forecast, data):
             if outcome is not None:
                 result['yahoo_teams'][name]['weekly_results'][key] = outcome
         result['lineups'].pop(key, None)
+        result.get('matchup_pairs', {}).pop(key, None)
     result['projected_weeks'] = [w for w in result['projected_weeks'] if int(w) >= current]
     result['warnings'] = [warning for warning in result.get('warnings', [])
                           if not any(warning.startswith(f'Week {w},') for w in range(1, current + 1))]

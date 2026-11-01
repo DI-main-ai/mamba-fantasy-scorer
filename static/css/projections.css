@@ -307,7 +307,7 @@
     align-items: start;
     gap: 10px;
     padding: 10px;
-    border: 1px solid rgba(196, 179, 123, .35);
+    border: 2px solid #568bd6;
     border-radius: 12px;
     min-width: 0;
 }
@@ -331,3 +331,6 @@
 .ros-team-heading { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; min-width: 0; }
 .ros-team-heading strong { min-width: 0; }
 .ros-team-logo { width: 32px; height: 32px; flex: 0 0 32px; object-fit: contain; border-radius: 8px; }
+
+.ros-matchup-list > .ros-matchup:nth-child(odd) { border-color: #568bd6; }
+.ros-matchup-list > .ros-matchup:nth-child(even) { border-color: #a278d4; }

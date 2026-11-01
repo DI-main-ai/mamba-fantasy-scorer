@@ -324,3 +324,6 @@
 @media (max-width: 700px) {
     .ros-matchup { grid-template-columns: minmax(0, 1fr); gap: 8px; padding: 8px; }
 }
+
+.ros-matchup-score-win { color: #64dba3; }
+.ros-matchup-score-loss { color: #ff7b86; }

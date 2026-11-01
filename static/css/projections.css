@@ -327,3 +327,7 @@
 
 .ros-matchup-score-win { color: #64dba3; }
 .ros-matchup-score-loss { color: #ff7b86; }
+
+.ros-team-heading { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; min-width: 0; }
+.ros-team-heading strong { min-width: 0; }
+.ros-team-logo { width: 32px; height: 32px; flex: 0 0 32px; object-fit: contain; border-radius: 8px; }

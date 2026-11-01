@@ -217,7 +217,7 @@ def live_dashboard_home(
 ):
     selected_season = season if season is not None else _latest_available_season(request)
     data = load_cached_yahoo_dashboard_data(
-        request=request, season=selected_season, requested_week=None if view.lower() == "ros" else week
+        request=request, season=selected_season, requested_week=None if view.lower() in {"projected", "ros"} else week
     )
 
     refresh_meta = data.get("_refresh_meta", {})
@@ -290,7 +290,7 @@ def live_dashboard_home(
             selected_season == current_calendar_season
             and int(data.get("current_week") or 0) == int(data.get("maximum_week") or 0)
         ),
-        "live_refresh_requested_week": week,
+        "live_refresh_requested_week": None if view.lower() in {"projected", "ros"} else week,
         "hybrid_scoring_enabled": hybrid_scoring_enabled,
         "standings_end_week": standings_end_week,
         "view_mode": view_mode,

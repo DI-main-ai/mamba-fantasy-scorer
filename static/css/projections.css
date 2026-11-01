@@ -298,3 +298,39 @@
 .ros-mode .ros-summary { border-color: #2c6648; background: #11241a; color: #d9f3e5; }
 .ros-mode .ros-team { background: #183024; }
 .ros-mode .ros-summary a { color: #78ecad; }
+
+/* Keep each week's scheduled opponents together, including on mobile. */
+.ros-matchup-list { display: grid; gap: 18px; }
+.ros-matchup {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+    align-items: start;
+    gap: 10px;
+    padding: 10px;
+    border: 2px solid #568bd6;
+    border-radius: 12px;
+    min-width: 0;
+}
+.ros-matchup .ros-team { min-width: 0; }
+.ros-matchup .ros-team strong { overflow-wrap: anywhere; }
+.ros-matchup-vs {
+    align-self: center;
+    justify-self: center;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .08em;
+    opacity: .7;
+}
+@media (max-width: 700px) {
+    .ros-matchup { grid-template-columns: minmax(0, 1fr); gap: 8px; padding: 8px; }
+}
+
+.ros-matchup-score-win { color: #64dba3; }
+.ros-matchup-score-loss { color: #ff7b86; }
+
+.ros-team-heading { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; min-width: 0; }
+.ros-team-heading strong { min-width: 0; }
+.ros-team-logo { width: 32px; height: 32px; flex: 0 0 32px; object-fit: contain; border-radius: 8px; }
+
+.ros-matchup-list > .ros-matchup:nth-child(odd) { border-color: #568bd6; }
+.ros-matchup-list > .ros-matchup:nth-child(even) { border-color: #a278d4; }

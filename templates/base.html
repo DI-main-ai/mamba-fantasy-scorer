@@ -19,6 +19,13 @@
     <link rel="stylesheet" href="{{ url_for('static', path='css/scoring-log.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', path='css/trades.css') }}?v=20261001-mobile-leaderboard">
     <link rel="stylesheet" href="{{ url_for('static', path='css/navigation-grid.css') }}">
+<style>
+.header-week-nav { display:inline-flex; align-items:center; gap:6px; white-space:nowrap; }
+.header-week-arrow { display:inline-flex; align-items:center; justify-content:center; width:36px; height:36px; border:1px solid rgba(253,185,39,.32); border-radius:10px; color:var(--gold,#fdb927); background:rgba(253,185,39,.08); font-size:28px; line-height:1; text-decoration:none; }
+.header-week-arrow:hover { background:rgba(253,185,39,.18); }
+.header-week-arrow:focus-visible { outline:2px solid var(--gold,#fdb927); outline-offset:2px; }
+@media(max-width:700px) { .header-week-arrow { width:40px; height:40px; } .header-week-nav { gap:4px; } }
+</style>
 </head>
 <body{% if view_mode in ['projected', 'ros'] %} class="projected-mode{% if view_mode == 'ros' %} ros-mode{% endif %}"{% endif %}>
     <header class="site-header">
@@ -28,7 +35,15 @@
                 <div class="brand-copy"><span class="brand-name">Mamba Fantasy</span><span class="brand-subtitle">Hybrid Fantasy Football Rankings</span></div>
             </a>
             <div class="header-status-block">
-                <div class="season-status"><span class="season-label">{{ season }} Season</span><span class="status-divider"></span><span class="week-label">Week {{ current_week }}</span></div>
+                <div class="season-status"><span class="season-label">{{ season }} Season</span><span class="status-divider"></span><nav class="header-week-nav" aria-label="Week navigation">
+                    {% set nav_weeks = available_weeks|default([])|map('int')|sort|list %}
+                    {% set nav_current = current_week|int %}
+                    {% set previous = nav_weeks|select('lt', nav_current)|list %}
+                    {% set following = nav_weeks|select('gt', nav_current)|list %}
+                    {% if previous %}<a class="header-week-arrow" href="/?season={{ season }}&amp;week={{ previous[-1] }}&amp;view=actual" aria-label="Previous week: Week {{ previous[-1] }}" title="Previous week">‹</a>{% endif %}
+                    <span class="week-label">Week {{ current_week }}</span>
+                    {% if following %}<a class="header-week-arrow" href="/?season={{ season }}&amp;week={{ following[0] }}&amp;view=actual" aria-label="Next week: Week {{ following[0] }}" title="Next week">›</a>{% endif %}
+                    </nav></div>
                 {% if scoring_log_header %}
                 <div id="scoring-log-refresh-status" class="yahoo-refresh-status {% if scoring_log_active %}is-live{% endif %} {% if scoring_log_error %}is-stale{% endif %}">
                     <span class="yahoo-refresh-dot" aria-hidden="true"></span><span class="yahoo-refresh-mode">{% if scoring_log_active and not scoring_log_error %}LIVE LOG{% else %}Scoring Log{% endif %}</span><span class="yahoo-refresh-time" id="scoring-log-refresh-time">{% if scoring_log_last_success %}Updated recently{% else %}Initializing collector{% endif %}</span>

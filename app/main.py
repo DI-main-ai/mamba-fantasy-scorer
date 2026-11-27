@@ -4,6 +4,7 @@ from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.sessions import SessionMiddleware
 
+from app.player_rankings import router as player_rankings_router
 from app.live_dashboard import live_dashboard_router
 from app.roster_snapshot import (
     roster_snapshot_router,
@@ -82,6 +83,7 @@ async def _stop_background_collectors() -> None:
 app.include_router(live_dashboard_router)
 app.include_router(matchup_detail_router)
 app.include_router(scoring_log_router)
+app.include_router(player_rankings_router)
 app.include_router(roster_snapshot_router)
 app.include_router(ros_router)
 app.include_router(router)

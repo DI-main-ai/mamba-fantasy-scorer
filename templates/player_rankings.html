@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block content %}
+<link rel="stylesheet" href="/static/css/player-rankings.css">
+<section class="player-ranks">
+<a class="section-jump-link" href="/">← Dashboard</a>
+<p class="section-kicker">Weekly consistency</p>
+<h1>Player <span>Rankings</span></h1>
+<p>Actual points using our public Yahoo league’s scoring. Lower average rank is better.</p>
+<div class="rank-position-tabs" role="group" aria-label="Position">
+{% for p in ['QB','RB','WR','TE','DEF'] %}<button type="button" data-position="{{ p }}" aria-pressed="{{ 'true' if p == 'RB' else 'false' }}">{{ p }}</button>{% endfor %}
+</div>
+<div class="rank-controls"><label>Find a player <input id="rank-search" type="search" placeholder="Player name or NFL team"></label><label>Sort by <select id="rank-sort"><option value="average">Average rank</option></select></label><button id="rank-direction" type="button">Lowest first ↑</button></div>
+<p class="rank-rules">Five games minimum for average rank. Players below five games appear after qualifiers and remain sortable by week. Byes and missed games are excluded; played games with zero points count. Ties share a rank (1, 2, 2, 4).</p>
+<p id="rank-status" role="status" aria-live="polite">Loading weekly ranks…</p>
+<div class="rank-scroll" tabindex="0" aria-label="Weekly positional ranks; scroll horizontally for more weeks"><table id="rank-table"><caption id="rank-caption">RB weekly positional ranks</caption><thead></thead><tbody></tbody></table></div>
+<p class="rank-rules">Each week shows positional rank with actual points underneath. The current week is provisional while games are underway and counts only players Yahoo records as having played. A dash means no game recorded.</p>
+</section>
+<script src="/static/js/player-rankings.js" defer></script>
+{% endblock %}

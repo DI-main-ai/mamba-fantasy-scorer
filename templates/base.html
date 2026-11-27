@@ -41,7 +41,7 @@
                     {% set previous = nav_weeks|select('lt', nav_current)|list %}
                     {% set following = nav_weeks|select('gt', nav_current)|list %}
                     {% if previous and view_mode not in ['projected', 'ros'] %}<a class="header-week-arrow" href="/?season={{ season }}&amp;week={{ previous[-1] }}&amp;view=actual" aria-label="Previous week: Week {{ previous[-1] }}" title="Previous week">‹</a>{% endif %}
-                    <span class="week-label">{% if view_mode == 'ros' %}ROS{% else %}Week {{ current_week }}{% endif %}</span>
+                    <span class="week-label">{% if rankings_header %}Player Ranks{% elif view_mode == 'ros' %}ROS{% else %}Week {{ current_week }}{% endif %}</span>
                     {% if following and view_mode not in ['projected', 'ros'] %}<a class="header-week-arrow" href="/?season={{ season }}&amp;week={{ following[0] }}&amp;view=actual" aria-label="Next week: Week {{ following[0] }}" title="Next week">›</a>{% endif %}
                     </nav></div>
                 {% if scoring_log_header %}

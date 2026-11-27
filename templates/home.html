@@ -15,6 +15,7 @@
     <a class="section-jump-link {% if active == 'matchups' %}is-active{% endif %}" href="#weekly-matchups">Matchups</a>
     {% if show_trades_section %}<a class="section-jump-link" href="#trades">Trades</a>{% endif %}
     <a class="section-jump-link" href="/scoring-log?season={{ season }}&week={{ current_week }}">Live Log</a>
+                <a class="section-jump-link" href="/player-rankings">Player Rankings</a>
 </nav>
 {% endmacro %}
 
@@ -56,6 +57,7 @@
                 <a class="dashboard-button" href="#weekly-matchups">Matchups</a>
                 {% if show_trades_section %}<a class="dashboard-button" href="#trades">Trades</a>{% endif %}
                 <a class="dashboard-button" href="/scoring-log?season={{ season }}&week={{ current_week }}">Live Log</a>
+                <a class="dashboard-button" href="/player-rankings">Player Rankings</a>
             </div>
             <span class="updated-label">{% if view_mode == 'ros' %}ROS projected through Week {{ ros_end_week }}{% elif view_mode == 'projected' %}Projected through Week {{ projection_week }}{% elif projection_enabled and actual_through_week < projection_week %}Actual through Week {{ actual_through_week }}{% else %}Through Week {{ current_week }}{% endif %}</span>
         </div>
